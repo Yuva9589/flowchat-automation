@@ -1,20 +1,14 @@
 import Navbar from "@/components/Navbar";
+import Hero from "@/components/Hero";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-white">
       <Navbar />
+      <Hero />
 
-      {/* Test content — abhi placeholder */}
-      <div className="pt-32 px-6 max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-900">
-          🎉 Navbar test — upar dekh!
-        </h1>
-        <p className="text-gray-600 mt-4">
-          Neeche scroll karo aur navbar dekho — wo blur + white ho jayega.
-        </p>
-        <div style={{ height: "200vh" }} />
-      </div>
+      {/* Extra space taaki scroll test ho sake */}
+      <div style={{ height: "100vh" }} />
     </main>
   );
 }
