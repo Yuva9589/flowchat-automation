@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import { useUser, UserButton } from "@clerk/nextjs";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { isSignedIn, isLoaded } = useUser();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -16,8 +18,8 @@ export default function Navbar() {
   const links = [
     { name: "Features", href: "#features" },
     { name: "Platforms", href: "#platforms" },
-    { name: "Pricing", href: "#pricing" },
-    { name: "Reviews", href: "#reviews" },
+    { name: "Pricing", href: "#pricing-section" },
+    { name: "Reviews", href: "#testimonials-section" },
   ];
 
   return (
@@ -30,7 +32,7 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         {/* Logo */}
-        <a href="#" className="flex flex-col leading-none">
+        <a href="/" className="flex flex-col leading-none">
           <span className="text-2xl font-black tracking-tight text-gray-900">
             Flow<span style={{ color: "#03856b" }}>chat</span>
           </span>
@@ -52,21 +54,46 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* CTA Buttons */}
+        {/* Right side — Auth */}
         <div className="hidden md:flex items-center gap-3">
-          <a
-            href="#login"
-            className="text-sm font-medium text-gray-700 hover:text-[#03856b] transition-colors"
-          >
-            Log in
-          </a>
-          <a
-            href="#signup"
-            style={{ backgroundColor: "#03856b" }}
-            className="text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 hover:opacity-90"
-          >
-            Get Started Free
-          </a>
+          {!isLoaded ? (
+            /* Loading placeholder to avoid layout shift */
+            <div className="w-40 h-10" />
+          ) : isSignedIn ? (
+            /* Logged IN state */
+            <>
+              <a
+                href="/dashboard"
+                className="text-sm font-medium text-gray-700 hover:text-[#03856b] transition-colors"
+              >
+                Dashboard
+              </a>
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-9 h-9",
+                  },
+                }}
+              />
+            </>
+          ) : (
+            /* Logged OUT state */
+            <>
+              <a
+                href="/sign-in"
+                className="text-sm font-medium text-gray-700 hover:text-[#03856b] transition-colors"
+              >
+                Log in
+              </a>
+              <a
+                href="/sign-up"
+                style={{ backgroundColor: "#03856b" }}
+                className="text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 hover:opacity-90"
+              >
+                Get Started Free
+              </a>
+            </>
+          )}
         </div>
 
         {/* Mobile toggle */}
@@ -92,13 +119,32 @@ export default function Navbar() {
               {link.name}
             </a>
           ))}
-          <a
-            href="#signup"
-            style={{ backgroundColor: "#03856b" }}
-            className="block text-white text-center px-5 py-3 rounded-full font-semibold mt-3"
-          >
-            Get Started Free
-          </a>
+
+          {!isLoaded ? null : isSignedIn ? (
+            <a
+              href="/dashboard"
+              style={{ backgroundColor: "#03856b" }}
+              className="block text-white text-center px-5 py-3 rounded-full font-semibold mt-3"
+            >
+              Go to Dashboard
+            </a>
+          ) : (
+            <>
+              <a
+                href="/sign-in"
+                className="block text-gray-700 font-medium py-2"
+              >
+                Log in
+              </a>
+              <a
+                href="/sign-up"
+                style={{ backgroundColor: "#03856b" }}
+                className="block text-white text-center px-5 py-3 rounded-full font-semibold mt-3"
+              >
+                Get Started Free
+              </a>
+            </>
+          )}
         </div>
       )}
     </nav>
