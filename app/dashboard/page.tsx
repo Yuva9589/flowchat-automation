@@ -1,71 +1,117 @@
-import { UserButton } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
+import Link from "next/link";
 
-export default async function DashboardPage() {
+export default async function DashboardHomePage() {
   const user = await currentUser();
 
+  const stats = [
+    { label: "DMs Sent", value: "0", change: "+0 this week", color: "#03856b" },
+    { label: "Link Clicks", value: "0", change: "+0 this week", color: "#8b5cf6" },
+    { label: "New Followers", value: "0", change: "+0 this week", color: "#f97316" },
+    { label: "Conversion", value: "0%", change: "Start automating", color: "#ec4899" },
+  ];
+
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Top bar */}
-        <div className="flex items-center justify-between mb-8 bg-white rounded-2xl px-6 py-4 shadow-sm border border-gray-100">
-          <a href="/" className="flex flex-col leading-none">
-            <span className="text-2xl font-black tracking-tight text-gray-900">
-              Flow<span style={{ color: "#03856b" }}>chat</span>
-            </span>
-            <span className="text-[10px] text-gray-500 font-medium tracking-wide mt-0.5">
-              Dashboard
-            </span>
-          </a>
+    <div className="max-w-6xl mx-auto">
+      {/* Welcome */}
+      <div className="mb-8">
+        <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-2">
+          Welcome,{" "}
+          <span style={{ color: "#03856b" }}>
+            {user?.firstName || "Creator"}!
+          </span>{" "}
+          👋
+        </h1>
+        <p className="text-gray-600 text-base">
+          Let's turn your comments into customers. Pick a platform to get started.
+        </p>
+      </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600 hidden md:inline">
-              {user?.emailAddresses[0]?.emailAddress}
-            </span>
-            <UserButton
-              appearance={{
-                elements: {
-                  avatarBox: "w-10 h-10",
-                },
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {stats.map((s, i) => (
+          <div
+            key={i}
+            className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all"
+          >
+            <p className="text-xs text-gray-500 font-medium mb-2">{s.label}</p>
+            <p
+              className="text-3xl font-black leading-none"
+              style={{ color: s.color }}
+            >
+              {s.value}
+            </p>
+            <p className="text-xs text-gray-500 mt-2">{s.change}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Platform Cards */}
+      <div className="mb-8">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Your Platforms</h2>
+        <div className="grid md:grid-cols-3 gap-4">
+          <Link
+            href="/dashboard/instagram"
+            className="group bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
+          >
+            <div
+              className="w-11 h-11 rounded-xl flex items-center justify-center text-white mb-3 shadow-md"
+              style={{
+                backgroundImage:
+                  "linear-gradient(135deg, #8b5cf6, #ec4899, #f97316)",
               }}
-            />
-          </div>
-        </div>
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+              </svg>
+            </div>
+            <h3 className="font-bold text-gray-900 mb-1">Instagram</h3>
+            <p className="text-sm text-gray-500">
+              Auto-DM commenters & story replies
+            </p>
+          </Link>
 
-        {/* Welcome */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-2">
-            Welcome,{" "}
-            <span style={{ color: "#03856b" }}>
-              {user?.firstName || "Creator"}!
-            </span>{" "}
-            👋
-          </h1>
-          <p className="text-gray-600 text-lg mb-6">
-            You're all set. Let's build your first automation.
-          </p>
+          <Link
+            href="/dashboard/facebook"
+            className="group bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
+          >
+            <div
+              className="w-11 h-11 rounded-xl flex items-center justify-center text-white mb-3 shadow-md"
+              style={{
+                backgroundImage: "linear-gradient(135deg, #2563eb, #3b82f6)",
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
+              </svg>
+            </div>
+            <h3 className="font-bold text-gray-900 mb-1">Facebook</h3>
+            <p className="text-sm text-gray-500">
+              Auto-DM page post commenters
+            </p>
+          </Link>
 
-          <div className="grid md:grid-cols-3 gap-4 mt-8">
-            {[
-              { title: "🎯 Connect Instagram", desc: "One-tap login via Meta API" },
-              { title: "📘 Connect Facebook", desc: "Auto-DM your FB page comments" },
-              { title: "💬 Connect WhatsApp", desc: "Business API for auto-replies" },
-            ].map((card) => (
-              <div
-                key={card.title}
-                className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-5 border border-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer"
-              >
-                <h3 className="font-bold text-gray-900 mb-1">{card.title}</h3>
-                <p className="text-sm text-gray-600">{card.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="text-sm text-gray-500 mt-8 text-center">
-            🚧 Full dashboard coming in next step — automations, analytics, settings, etc.
-          </p>
+          <Link
+            href="/dashboard/whatsapp"
+            className="group bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
+          >
+            <div
+              className="w-11 h-11 rounded-xl flex items-center justify-center text-white mb-3 shadow-md"
+              style={{
+                backgroundImage: "linear-gradient(135deg, #22c55e, #16a34a)",
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" />
+              </svg>
+            </div>
+            <h3 className="font-bold text-gray-900 mb-1">WhatsApp</h3>
+            <p className="text-sm text-gray-500">Business API auto-replies</p>
+          </Link>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
