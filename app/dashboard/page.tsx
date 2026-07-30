@@ -1,8 +1,12 @@
 import { currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
+import { syncClerkUserToSupabase } from "@/lib/syncUser";
 
 export default async function DashboardHomePage() {
   const user = await currentUser();
+
+  // Auto-sync Clerk user to Supabase on every dashboard visit
+  await syncClerkUserToSupabase();
 
   const stats = [
     { label: "DMs Sent", value: "0", change: "+0 this week", color: "#03856b" },
