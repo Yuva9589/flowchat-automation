@@ -47,7 +47,7 @@ export default function Hero() {
               backgroundClip: "text",
             }}
           >
-            on DM Automation.
+            DM Automation.
           </span>
         </h1>
 
