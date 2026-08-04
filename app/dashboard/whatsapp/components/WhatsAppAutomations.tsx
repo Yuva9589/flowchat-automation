@@ -9,7 +9,7 @@ export interface Automation {
   keyword: string;
   triggerType: string; // "Incoming message" or "Broadcast"
   message: string;
-  useTemplate: boolean; // WhatsApp Business Template (pre-approved)
+  useTemplate: boolean;
   status: "active" | "paused";
   dmsSent: number;
   clicks: number;
@@ -97,11 +97,19 @@ export default function WhatsAppAutomations({
     setMenuOpenId(null);
   };
 
+  const resetForm = () => {
+    setNewKeyword("");
+    setNewTriggerType("Incoming message");
+    setNewMessage("");
+    setNewUseTemplate(true);
+  };
+
   const handleCreate = () => {
     if (!newKeyword.trim() || !newMessage.trim()) {
       alert("Please fill keyword and message");
       return;
     }
+
     const newAuto: Automation = {
       id: Date.now().toString(),
       keyword: newKeyword.toUpperCase().trim(),
@@ -113,12 +121,9 @@ export default function WhatsAppAutomations({
       clicks: 0,
       createdAt: "Just now",
     };
-    onCreate(newAuto);
 
-    setNewKeyword("");
-    setNewTriggerType("Incoming message");
-    setNewMessage("");
-    setNewUseTemplate(true);
+    onCreate(newAuto);
+    resetForm();
     setShowCreateModal(false);
   };
 
@@ -263,7 +268,6 @@ export default function WhatsAppAutomations({
                           />
                           {a.status === "active" ? "Active" : "Paused"}
                         </span>
-
                         <span className="text-xs text-gray-500">Keyword:</span>
                         <span
                           className="px-2 py-0.5 rounded-md text-xs font-bold tracking-wide"
@@ -356,34 +360,42 @@ export default function WhatsAppAutomations({
       {showCreateModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-          onClick={() => setShowCreateModal(false)}
+          onClick={() => {
+            resetForm();
+            setShowCreateModal(false);
+          }}
         >
           <div
             className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            {/* Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
               <div>
                 <h3 className="text-lg font-black text-gray-900">
-                  Create Automation
+                  Create WhatsApp Automation
                 </h3>
                 <p className="text-xs text-gray-500">
                   Set up your WhatsApp auto-reply
                 </p>
               </div>
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => {
+                  resetForm();
+                  setShowCreateModal(false);
+                }}
                 className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-600"
               >
                 <CloseIcon />
               </button>
             </div>
 
+            {/* Form */}
             <div className="p-6 space-y-5">
               {/* Keyword */}
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-1.5">
-                  Trigger Keyword <span className="text-red-500">*</span>
+                  1️⃣ Trigger Keyword <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -392,20 +404,18 @@ export default function WhatsAppAutomations({
                   placeholder="e.g. HI, PRICE, DEMO"
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-sm font-medium uppercase tracking-wide"
                 />
-                <p className="text-[11px] text-gray-500 mt-1">
-                  When someone sends this word on WhatsApp, auto-reply fires.
-                </p>
               </div>
 
               {/* Trigger Type */}
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-1.5">
-                  Trigger Type
+                  2️⃣ Trigger Type
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {["Incoming message", "Broadcast"].map((type) => (
                     <button
                       key={type}
+                      type="button"
                       onClick={() => setNewTriggerType(type)}
                       className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all border ${
                         newTriggerType === type
@@ -430,18 +440,31 @@ export default function WhatsAppAutomations({
               {/* Message */}
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-1.5">
-                  Reply Message <span className="text-red-500">*</span>
+                  3️⃣ Reply Message <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Hi! Thanks for reaching out. Here's your info 👉 flowchat.link/..."
+                  placeholder="Hi! Thanks for reaching out. Here's your info 👉 https://your-link.com"
                   rows={4}
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-sm resize-none"
                 />
-                <p className="text-[11px] text-gray-500 mt-1">
-                  AI can rewrite this for personalization.
-                </p>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {[
+                    { label: "🔗 Insert link", text: " https://your-link.com" },
+                    { label: "👋 Greeting", text: "Hi! 👋 " },
+                    { label: "🎉 Emoji", text: " 🎉" },
+                  ].map((snippet, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setNewMessage((prev) => prev + snippet.text)}
+                      className="text-[10px] font-medium px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
+                    >
+                      {snippet.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Template toggle */}
@@ -451,8 +474,7 @@ export default function WhatsAppAutomations({
                     📋 Use WhatsApp Template
                   </p>
                   <p className="text-xs text-gray-500">
-                    Pre-approved template ensures higher deliverability (WA
-                    Business requirement).
+                    Pre-approved template ensures higher deliverability.
                   </p>
                 </div>
                 <button
@@ -478,9 +500,13 @@ export default function WhatsAppAutomations({
               </div>
             </div>
 
+            {/* Footer */}
             <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex items-center justify-end gap-2 rounded-b-2xl">
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => {
+                  resetForm();
+                  setShowCreateModal(false);
+                }}
                 className="px-4 py-2.5 rounded-full font-semibold text-sm text-gray-700 hover:bg-gray-50 transition-all"
               >
                 Cancel
@@ -489,8 +515,7 @@ export default function WhatsAppAutomations({
                 onClick={handleCreate}
                 className="inline-flex items-center gap-2 text-white px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
                 style={{
-                  backgroundImage:
-                    "linear-gradient(135deg, #22c55e, #16a34a)",
+                  backgroundImage: "linear-gradient(135deg, #22c55e, #16a34a)",
                 }}
               >
                 Create Automation

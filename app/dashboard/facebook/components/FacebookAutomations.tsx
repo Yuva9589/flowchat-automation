@@ -9,11 +9,14 @@ export interface Automation {
   keyword: string;
   postCaption: string;
   message: string;
-  followGate: boolean; // "Like-gate" in Facebook, same logic
+  followGate: boolean;
   status: "active" | "paused";
   dmsSent: number;
   clicks: number;
   createdAt: string;
+  postUrl?: string | null;
+  postType?: string | null;
+  triggerScope?: string;
 }
 
 interface Props {
@@ -62,6 +65,25 @@ function CloseIcon() {
   );
 }
 
+function LinkIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
+function ExternalLinkIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+
 /* ============= Main Component ============= */
 
 export default function FacebookAutomations({
@@ -71,14 +93,14 @@ export default function FacebookAutomations({
   onDelete,
   onCreate,
 }: Props) {
-  // Local UI state
   const [filter, setFilter] = useState<"all" | "active" | "paused">("all");
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Create form state
+  const [triggerScope, setTriggerScope] = useState<"specific" | "all">("specific");
+  const [postUrl, setPostUrl] = useState("");
   const [newKeyword, setNewKeyword] = useState("");
-  const [newPostCaption, setNewPostCaption] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [newFollowGate, setNewFollowGate] = useState(true);
 
@@ -98,29 +120,47 @@ export default function FacebookAutomations({
     setMenuOpenId(null);
   };
 
+  const resetForm = () => {
+    setTriggerScope("specific");
+    setPostUrl("");
+    setNewKeyword("");
+    setNewMessage("");
+    setNewFollowGate(true);
+  };
+
   const handleCreate = () => {
     if (!newKeyword.trim() || !newMessage.trim()) {
       alert("Please fill keyword and message");
       return;
     }
+
+    if (triggerScope === "specific" && !postUrl.trim()) {
+      alert("Please paste the Facebook post/ad URL");
+      return;
+    }
+
+    const postCaption =
+      triggerScope === "specific" && postUrl.trim()
+        ? `📄 FB Post/Ad Link · ${postUrl.slice(0, 25)}...`
+        : "🌐 Applies to all page posts";
+
     const newAuto: Automation = {
       id: Date.now().toString(),
       keyword: newKeyword.toUpperCase().trim(),
-      postCaption: newPostCaption || "No post caption set",
+      postCaption,
       message: newMessage,
       followGate: newFollowGate,
       status: "active",
       dmsSent: 0,
       clicks: 0,
       createdAt: "Just now",
+      postUrl: triggerScope === "specific" ? postUrl : null,
+      postType: triggerScope === "specific" ? "facebook_post" : "all",
+      triggerScope,
     };
-    onCreate(newAuto);
 
-    // Reset form
-    setNewKeyword("");
-    setNewPostCaption("");
-    setNewMessage("");
-    setNewFollowGate(true);
+    onCreate(newAuto);
+    resetForm();
     setShowCreateModal(false);
   };
 
@@ -187,7 +227,7 @@ export default function FacebookAutomations({
             No automations yet
           </h3>
           <p className="text-sm text-gray-500 mb-5">
-            Create your first Facebook automation.
+            Create your first Facebook Page automation.
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -234,6 +274,8 @@ export default function FacebookAutomations({
           <div className="space-y-3">
             {filtered.map((a) => {
               const isMenuOpen = menuOpenId === a.id;
+              const isSpecific = a.triggerScope === "specific" && a.postUrl;
+
               return (
                 <div
                   key={a.id}
@@ -275,17 +317,37 @@ export default function FacebookAutomations({
                         >
                           {a.keyword}
                         </span>
+
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-blue-50 text-blue-700">
+                          📄 Facebook Post
+                        </span>
+
                         {a.followGate && (
                           <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-purple-50 text-purple-700">
-                            👍 Like-gate
+                            🛡️ Follow-gate
                           </span>
                         )}
                       </div>
 
-                      <p className="text-sm text-gray-700 mb-1 line-clamp-1">
-                        <span className="text-gray-500">On post:</span>{" "}
-                        "{a.postCaption}"
-                      </p>
+                      {isSpecific && (
+                        <a
+                          href={a.postUrl!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline mb-1 max-w-full"
+                        >
+                          <LinkIcon />
+                          <span className="truncate">{a.postUrl}</span>
+                          <ExternalLinkIcon />
+                        </a>
+                      )}
+
+                      {!isSpecific && (
+                        <p className="text-xs text-gray-500 mb-1">
+                          🌐 Applies to <strong>all posts</strong> on your page
+                        </p>
+                      )}
+
                       <p className="text-sm text-gray-500 mb-3 line-clamp-1 italic">
                         Reply: "{a.message}"
                       </p>
@@ -326,9 +388,7 @@ export default function FacebookAutomations({
                               onClick={() => handleToggle(a.id)}
                               className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                             >
-                              {a.status === "active"
-                                ? "⏸ Pause"
-                                : "▶ Activate"}
+                              {a.status === "active" ? "⏸ Pause" : "▶ Activate"}
                             </button>
                             <button className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                               ✏️ Edit
@@ -353,29 +413,35 @@ export default function FacebookAutomations({
       )}
 
       {/* ============================================= */}
-      {/* CREATE AUTOMATION MODAL                        */}
+      {/* CREATE AUTOMATION MODAL (WITH POST SELECTOR)  */}
       {/* ============================================= */}
       {showCreateModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-          onClick={() => setShowCreateModal(false)}
+          onClick={() => {
+            resetForm();
+            setShowCreateModal(false);
+          }}
         >
           <div
             className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
               <div>
                 <h3 className="text-lg font-black text-gray-900">
-                  Create Automation
+                  Create Facebook Automation
                 </h3>
                 <p className="text-xs text-gray-500">
-                  Set up your keyword-triggered auto-DM
+                  Set up keyword auto-DM for Facebook Page
                 </p>
               </div>
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => {
+                  resetForm();
+                  setShowCreateModal(false);
+                }}
                 className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-600"
               >
                 <CloseIcon />
@@ -384,10 +450,62 @@ export default function FacebookAutomations({
 
             {/* Form */}
             <div className="p-6 space-y-5">
-              {/* Keyword */}
+              {/* STEP 1: Which post? */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-2">
+                  1️⃣ Which post/ad triggers this? <span className="text-red-500">*</span>
+                </label>
+
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setTriggerScope("specific")}
+                    className={`p-3 rounded-xl border-2 text-left transition-all ${
+                      triggerScope === "specific"
+                        ? "border-blue-600 bg-blue-50/50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="text-lg mb-0.5">🎯</div>
+                    <p className="text-xs font-bold text-gray-900">Specific post</p>
+                    <p className="text-[10px] text-gray-500">Page post or ad link</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTriggerScope("all")}
+                    className={`p-3 rounded-xl border-2 text-left transition-all ${
+                      triggerScope === "all"
+                        ? "border-blue-600 bg-blue-50/50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="text-lg mb-0.5">🌐</div>
+                    <p className="text-xs font-bold text-gray-900">All posts</p>
+                    <p className="text-[10px] text-gray-500">Apply to everything</p>
+                  </button>
+                </div>
+
+                {triggerScope === "specific" && (
+                  <div>
+                    <input
+                      type="url"
+                      value={postUrl}
+                      onChange={(e) => setPostUrl(e.target.value)}
+                      placeholder="https://www.facebook.com/permalink.php?story_fbid=..."
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+                    />
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Paste the Facebook post or ad link.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* STEP 2: Keyword */}
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-1.5">
-                  Trigger Keyword <span className="text-red-500">*</span>
+                  2️⃣ Trigger Keyword <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -396,53 +514,46 @@ export default function FacebookAutomations({
                   placeholder="e.g. OFFER, INFO, DEMO"
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-medium uppercase tracking-wide"
                 />
-                <p className="text-[11px] text-gray-500 mt-1">
-                  Users comment this word to trigger the DM.
-                </p>
               </div>
 
-              {/* Post caption */}
+              {/* STEP 3: Message */}
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-1.5">
-                  Post caption (optional)
-                </label>
-                <input
-                  type="text"
-                  value={newPostCaption}
-                  onChange={(e) => setNewPostCaption(e.target.value)}
-                  placeholder='e.g. "Drop OFFER for 30% off 🎁"'
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
-                />
-                <p className="text-[11px] text-gray-500 mt-1">
-                  Helps you remember which post this automation is for.
-                </p>
-              </div>
-
-              {/* Message */}
-              <div>
-                <label className="block text-sm font-bold text-gray-900 mb-1.5">
-                  DM Message <span className="text-red-500">*</span>
+                  3️⃣ Messenger DM Message <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Here's your link 👉 flowchat.link/..."
+                  placeholder="Hey! Here's your link 👉 https://your-link.com"
                   rows={4}
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm resize-none"
                 />
-                <p className="text-[11px] text-gray-500 mt-1">
-                  AI will rewrite this into unique variations.
-                </p>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {[
+                    { label: "🔗 Insert link", text: " https://your-link.com" },
+                    { label: "👋 Greeting", text: "Hey! 👋 " },
+                    { label: "🎉 Emoji", text: " 🎉" },
+                  ].map((snippet, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setNewMessage((prev) => prev + snippet.text)}
+                      className="text-[10px] font-medium px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
+                    >
+                      {snippet.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Like-gate toggle */}
+              {/* Follow-gate */}
               <div className="flex items-start justify-between gap-3 p-4 rounded-xl bg-gray-50 border border-gray-100">
                 <div className="flex-1">
                   <p className="text-sm font-bold text-gray-900 mb-0.5">
-                    👍 Like-gate
+                    🛡️ Follow-gate
                   </p>
                   <p className="text-xs text-gray-500">
-                    Ask users to like your page before sending the link.
+                    Require page like before sending automated message.
                   </p>
                 </div>
                 <button
@@ -471,7 +582,10 @@ export default function FacebookAutomations({
             {/* Footer */}
             <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex items-center justify-end gap-2 rounded-b-2xl">
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => {
+                  resetForm();
+                  setShowCreateModal(false);
+                }}
                 className="px-4 py-2.5 rounded-full font-semibold text-sm text-gray-700 hover:bg-gray-50 transition-all"
               >
                 Cancel
@@ -480,8 +594,7 @@ export default function FacebookAutomations({
                 onClick={handleCreate}
                 className="inline-flex items-center gap-2 text-white px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
                 style={{
-                  backgroundImage:
-                    "linear-gradient(135deg, #2563eb, #3b82f6)",
+                  backgroundImage: "linear-gradient(135deg, #2563eb, #3b82f6)",
                 }}
               >
                 Create Automation
