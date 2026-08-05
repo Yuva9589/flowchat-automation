@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Flowchat — Your AI DM Automation",
   description:
-    "Automate Instagram, Facebook & WhatsApp DMs on autopilot. Turn comments into customers with Flowchat.",
+    "Automate Instagram, Facebook & WhatsApp DMs. Turn comments into customers with Flowchat.",
 };
 
 export default function RootLayout({

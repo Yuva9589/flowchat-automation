@@ -76,7 +76,7 @@ export default function FacebookSection() {
                 backgroundClip: "text",
               }}
             >
-              on autopilot too.
+              with DM automation too.
             </span>
           </h2>
 

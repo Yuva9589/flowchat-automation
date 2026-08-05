@@ -133,7 +133,7 @@ export default function Footer() {
 
             <p className="text-sm text-gray-400 leading-relaxed mb-5 max-w-xs">
               Turn every Instagram, Facebook & WhatsApp comment into a customer.
-              Built for creators, on autopilot.
+              Built for creators with DM automation.
             </p>
 
             {/* Social icons */}
