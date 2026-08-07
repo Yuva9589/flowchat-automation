@@ -1,6 +1,37 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+/* =========================================================================
+   ✏️ EDIT YOUR REFUND POLICY TEXT HERE (NO CODING REQUIRED)
+   Aapko niche sirf double quotes "..." ke andar apna simple text badalna hai.
+   ========================================================================= */
+
+const refundData = {
+  title: "Refund & Cancellation Policy",
+  subtitle: "Payment Terms & Subscription Policy | Domain: earnwithads.in",
+
+  sections: [
+    {
+      title: "1. 7-Day Free Trial",
+      text: "Flowchat provides a 7-day free trial with full access to all Instagram, Facebook, and WhatsApp DM automations. No credit card or payment details are required to start your free trial.",
+    },
+    {
+      title: "2. Cancellation Policy",
+      text: "You can cancel your Flowchat subscription (₹99/month or ₹799/year) at any time from your dashboard in just a couple of clicks. There are no cancellation fees, hidden charges, or lock-in contracts.",
+    },
+    {
+      title: "3. Money-Back Guarantee & Refund Requests",
+      text: "We offer a 7-day money-back guarantee on all paid plans. If you are unsatisfied with Flowchat within 7 days of your payment, send an email to support@earnwithads.in requesting a refund.",
+      subText:
+        "Refunds are processed to your original payment method (UPI / Bank / Card) within 3-5 business days.",
+    },
+  ],
+};
+
+/* =========================================================================
+   ⚠️ DO NOT EDIT BELOW UNLESS YOU WANT TO CHANGE THE PAGE DESIGN
+   ========================================================================= */
+
 export default function RefundPolicyPage() {
   return (
     <main className="min-h-screen bg-white">
@@ -15,37 +46,19 @@ export default function RefundPolicyPage() {
               </span>
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight">
-              Refund & Cancellation Policy
+              {refundData.title}
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Payment Terms & Subscription Policy | Domain: earnwithads.in
-            </p>
+            <p className="text-sm text-gray-500 mt-1">{refundData.subtitle}</p>
           </div>
 
           <div className="space-y-6 text-sm text-gray-700 leading-relaxed">
-            <section className="space-y-2">
-              <h2 className="text-lg font-bold text-gray-900">1. 7-Day Free Trial</h2>
-              <p>
-                Flowchat provides a <strong>7-day free trial</strong> with full access to all Instagram, Facebook, and WhatsApp DM automations. No credit card or payment details are required to start your free trial.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-lg font-bold text-gray-900">2. Cancellation Policy</h2>
-              <p>
-                You can cancel your Flowchat subscription (₹99/month or ₹799/year) at any time from your dashboard in just a couple of clicks. There are no cancellation fees, hidden charges, or lock-in contracts.
-              </p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-lg font-bold text-gray-900">3. Money-Back Guarantee & Refund Requests</h2>
-              <p>
-                We offer a <strong>7-day money-back guarantee</strong> on all paid plans. If you are unsatisfied with Flowchat within 7 days of your payment, send an email to <strong>support@earnwithads.in</strong> requesting a refund.
-              </p>
-              <p>
-                Refunds are processed to your original payment method (UPI / Bank / Card) within 3-5 business days.
-              </p>
-            </section>
+            {refundData.sections.map((sec, idx) => (
+              <section key={idx} className="space-y-2">
+                <h2 className="text-lg font-bold text-gray-900">{sec.title}</h2>
+                <p>{sec.text}</p>
+                {sec.subText && <p>{sec.subText}</p>}
+              </section>
+            ))}
           </div>
 
           <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
