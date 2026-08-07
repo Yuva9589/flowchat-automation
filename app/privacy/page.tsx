@@ -62,7 +62,7 @@ export default function PrivacyPolicyPage() {
             <p>
               If you have any questions or concerns regarding this Privacy Policy or your data, please contact us at:
               <br />
-              <strong>Email:</strong> support@earnwithads.in
+              <strong>Email:</strong> ashishkushwaha1822@gmail.com
             </p>
           </section>
         </div>
