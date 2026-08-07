@@ -24,7 +24,7 @@ export default function Hero() {
             style={{ backgroundColor: "#03856b" }}
           />
           <span className="text-sm font-medium text-gray-700">
-            Powered by AI · Official APIs
+            Powered by AI Â· Official APIs
           </span>
         </div>
 
@@ -53,7 +53,7 @@ export default function Hero() {
             mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
           }`}
         >
-          Meet <strong className="text-gray-900">Flowchat</strong> — the
+          Meet <strong className="text-gray-900">Flowchat</strong> â€” the
           AI-powered comment-to-DM engine built for creators & businesses. Turn
           every comment into a customer, automatically.
         </p>
@@ -87,7 +87,7 @@ export default function Hero() {
             mounted ? "opacity-100" : "opacity-0"
           }`}
         >
-          7 days free · no card required · official Meta APIs
+          7 days free Â· no card required Â· official Meta APIs
         </p>
 
         <div
