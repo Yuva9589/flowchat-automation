@@ -1,17 +1,13 @@
 "use client";
 
-import { useState } from "react";
-
-/* ============= Section Components ============= */
+import { useState, useEffect } from "react";
 
 import FacebookConnection from "./components/FacebookConnection";
 import FacebookAutomations, {
-  type Automation,
+  type Automation as ComponentAutomation,
 } from "./components/FacebookAutomations";
 import FacebookAnalytics from "./components/FacebookAnalytics";
 import FacebookSettings from "./components/FacebookSettings";
-
-/* ============= Icons ============= */
 
 function FacebookLogo({ size = 24 }: { size?: number }) {
   return (
@@ -21,56 +17,78 @@ function FacebookLogo({ size = 24 }: { size?: number }) {
   );
 }
 
-/* ============= Sample Data ============= */
+interface DBAutomation {
+  id: string;
+  user_id: string;
+  platform: string;
+  keyword: string;
+  post_caption: string | null;
+  reply_message: string;
+  follow_gate: boolean;
+  status: "active" | "paused";
+  dms_sent: number;
+  clicks: number;
+  created_at: string;
+  post_url: string | null;
+  post_type: string | null;
+  trigger_scope: string;
+}
 
-const sampleAutomations: Automation[] = [
-  {
-    id: "1",
-    keyword: "OFFER",
-    postCaption: "Drop OFFER for 30% off — today only! 🎁",
-    message: "Boom! 30% off code: FB30 · Grab it 👉 flowchat.link/offer",
-    followGate: true,
-    status: "active",
-    dmsSent: 189,
-    clicks: 142,
-    createdAt: "3 days ago",
-  },
-  {
-    id: "2",
-    keyword: "INFO",
-    postCaption: "Comment INFO for full product details",
-    message: "Here are the details 👉 flowchat.link/info",
-    followGate: true,
-    status: "active",
-    dmsSent: 76,
-    clicks: 58,
-    createdAt: "1 week ago",
-  },
-  {
-    id: "3",
-    keyword: "DEMO",
-    postCaption: "Say DEMO to book a free call 📞",
-    message: "Awesome! Book your slot 👉 flowchat.link/demo",
-    followGate: false,
-    status: "paused",
-    dmsSent: 79,
-    clicks: 61,
-    createdAt: "2 weeks ago",
-  },
-];
+function timeAgo(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
 
-/* ============= Main Page ============= */
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins} min ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+  return `${Math.floor(diffDays / 7)} week${diffDays >= 14 ? "s" : ""} ago`;
+}
+
+function dbToComponent(db: DBAutomation): ComponentAutomation {
+  return {
+    id: db.id,
+    keyword: db.keyword,
+    postCaption: db.post_caption || "No post caption set",
+    message: db.reply_message,
+    followGate: db.follow_gate,
+    status: db.status,
+    dmsSent: db.dms_sent,
+    clicks: db.clicks,
+    createdAt: timeAgo(db.created_at),
+    postUrl: db.post_url,
+    postType: db.post_type,
+    triggerScope: db.trigger_scope || "all",
+  };
+}
 
 export default function FacebookDashboardPage() {
-  // 🔗 Connection state (shared across sections)
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [automations, setAutomations] = useState<ComponentAutomation[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // ⚡ Automations state (shared across sections)
-  const [automations, setAutomations] =
-    useState<Automation[]>(sampleAutomations);
+  const loadAutomations = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/automations?platform=facebook");
+      if (!res.ok) throw new Error("Failed to load automations");
+      const { automations: dbAutos } = await res.json();
+      setAutomations((dbAutos || []).map(dbToComponent));
+    } catch (err) {
+      console.error("Load error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  /* ============= Handlers ============= */
+  useEffect(() => {
+    loadAutomations();
+  }, []);
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -83,33 +101,80 @@ export default function FacebookDashboardPage() {
     setIsConnected(false);
   };
 
-  const handleToggleStatus = (id: string) => {
+  const handleToggleStatus = async (id: string) => {
+    const current = automations.find((a) => a.id === id);
+    if (!current) return;
+    const newStatus = current.status === "active" ? "paused" : "active";
+
     setAutomations((prev) =>
-      prev.map((a) =>
-        a.id === id
-          ? { ...a, status: a.status === "active" ? "paused" : "active" }
-          : a
-      )
+      prev.map((a) => (a.id === id ? { ...a, status: newStatus } : a))
     );
+
+    try {
+      const res = await fetch(`/api/automations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+    } catch (err) {
+      console.error(err);
+      loadAutomations();
+    }
   };
 
-  const handleDeleteAutomation = (id: string) => {
+  const handleDeleteAutomation = async (id: string) => {
     setAutomations((prev) => prev.filter((a) => a.id !== id));
+    try {
+      const res = await fetch(`/api/automations/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+    } catch (err) {
+      console.error(err);
+      loadAutomations();
+    }
   };
 
-  const handleCreateAutomation = (newAuto: Automation) => {
-    setAutomations((prev) => [newAuto, ...prev]);
+  const handleCreateAutomation = async (newAuto: ComponentAutomation) => {
+    try {
+      const res = await fetch("/api/automations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform: "facebook",
+          keyword: newAuto.keyword,
+          post_caption: newAuto.postCaption,
+          reply_message: newAuto.message,
+          follow_gate: newAuto.followGate,
+          post_url: newAuto.postUrl || null,
+          post_type: newAuto.postType || "all",
+          trigger_scope: newAuto.triggerScope || "all",
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to create");
+      const { automation: dbAuto } = await res.json();
+      setAutomations((prev) => [dbToComponent(dbAuto), ...prev]);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create Facebook automation");
+    }
   };
 
-  const handleDeleteAllAutomations = () => {
+  const handleDeleteAllAutomations = async () => {
+    const ids = automations.map((a) => a.id);
     setAutomations([]);
+    try {
+      await Promise.all(
+        ids.map((id) => fetch(`/api/automations/${id}`, { method: "DELETE" }))
+      );
+    } catch (err) {
+      console.error(err);
+      loadAutomations();
+    }
   };
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      {/* ============================================= */}
-      {/* PLATFORM BANNER — Facebook Blue                */}
-      {/* ============================================= */}
       <div
         className="rounded-2xl p-6 md:p-8 relative overflow-hidden"
         style={{
@@ -134,18 +199,20 @@ export default function FacebookDashboardPage() {
                   Live
                 </span>
               )}
+              {!loading && automations.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/20 text-white backdrop-blur-md">
+                  💾 {automations.length} saved
+                </span>
+              )}
             </div>
             <p className="text-white/90 text-sm">
-              Auto-DM commenters on your Page posts, ads, and Groups — all in
+              Auto-DM commenters on your Page posts, ads, and Reels — all in
               one place.
             </p>
           </div>
         </div>
       </div>
 
-      {/* ============================================= */}
-      {/* SECTION 1 — Connection                         */}
-      {/* ============================================= */}
       <FacebookConnection
         isConnected={isConnected}
         isConnecting={isConnecting}
@@ -153,25 +220,22 @@ export default function FacebookDashboardPage() {
         onDisconnect={handleDisconnect}
       />
 
-      {/* ============================================= */}
-      {/* SECTION 2 — Automations                        */}
-      {/* ============================================= */}
-      <FacebookAutomations
-        isConnected={isConnected}
-        automations={automations}
-        onToggleStatus={handleToggleStatus}
-        onDelete={handleDeleteAutomation}
-        onCreate={handleCreateAutomation}
-      />
+      {loading ? (
+        <div className="bg-white rounded-2xl p-10 border border-gray-100 text-center">
+          <p className="text-sm text-gray-500">Loading Facebook automations...</p>
+        </div>
+      ) : (
+        <FacebookAutomations
+          isConnected={isConnected}
+          automations={automations}
+          onToggleStatus={handleToggleStatus}
+          onDelete={handleDeleteAutomation}
+          onCreate={handleCreateAutomation}
+        />
+      )}
 
-      {/* ============================================= */}
-      {/* SECTION 3 — Analytics                          */}
-      {/* ============================================= */}
       <FacebookAnalytics isConnected={isConnected} />
 
-      {/* ============================================= */}
-      {/* SECTION 4 — Settings                           */}
-      {/* ============================================= */}
       <FacebookSettings
         isConnected={isConnected}
         onDisconnect={handleDisconnect}

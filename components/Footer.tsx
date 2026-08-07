@@ -1,7 +1,5 @@
 "use client";
 
-/* ============= Social Icons ============= */
-
 function InstagramIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -50,77 +48,68 @@ const columns = [
   {
     title: "Product",
     links: [
-      { label: "Features", href: "#features" },
-      { label: "Pricing", href: "#pricing" },
-      { label: "How It Works", href: "#how-it-works-section" },
-      { label: "Reviews", href: "#reviews" },
-      { label: "Roadmap", href: "#roadmap" },
+      { label: "Features", href: "/#features" },
+      { label: "Pricing", href: "/#pricing-section" },
+      { label: "How It Works", href: "/#how-it-works" },
+      { label: "Reviews", href: "/#testimonials-section" },
     ],
   },
   {
     title: "Platforms",
     links: [
-      { label: "Instagram Auto-DM", href: "#instagram" },
-      { label: "Facebook Auto-DM", href: "#facebook" },
-      { label: "WhatsApp Automation", href: "#whatsapp" },
-      { label: "AI Rewriting", href: "#ai" },
-      { label: "Analytics", href: "#analytics" },
+      { label: "Instagram Auto-DM", href: "/dashboard/instagram" },
+      { label: "Facebook Auto-DM", href: "/dashboard/facebook" },
+      { label: "WhatsApp Automation", href: "/dashboard/whatsapp" },
     ],
   },
   {
     title: "Company",
     links: [
-      { label: "About", href: "#about" },
-      { label: "Blog", href: "#blog" },
-      { label: "Careers", href: "#careers" },
-      { label: "Contact", href: "#contact" },
-      { label: "Press", href: "#press" },
+      { label: "About", href: "/about" },
+      { label: "Blog", href: "/blog" },
+      { label: "Careers", href: "/careers" },
+      { label: "Contact", href: "/contact" },
+      { label: "Press", href: "/press" },
     ],
   },
   {
     title: "Legal",
     links: [
-      { label: "Privacy Policy", href: "#privacy" },
-      { label: "Terms of Service", href: "#terms" },
-      { label: "Cookie Policy", href: "#cookies" },
-      { label: "Refund Policy", href: "#refunds" },
-      { label: "Data Security", href: "#security" },
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Terms of Service", href: "/terms" },
+      { label: "Cookie Policy", href: "/cookies" },
+      { label: "Refund Policy", href: "/refunds" },
+      { label: "Data Security", href: "/security" },
+      { label: "Data Deletion", href: "/data-deletion" },
     ],
   },
 ];
 
 const socials = [
-  { Icon: InstagramIcon, href: "#instagram", label: "Instagram" },
-  { Icon: FacebookIcon, href: "#facebook", label: "Facebook" },
-  { Icon: TwitterIcon, href: "#twitter", label: "Twitter" },
-  { Icon: YouTubeIcon, href: "#youtube", label: "YouTube" },
-  { Icon: LinkedInIcon, href: "#linkedin", label: "LinkedIn" },
+  { Icon: InstagramIcon, href: "https://instagram.com", label: "Instagram" },
+  { Icon: FacebookIcon, href: "https://facebook.com", label: "Facebook" },
+  { Icon: TwitterIcon, href: "https://twitter.com", label: "Twitter" },
+  { Icon: YouTubeIcon, href: "https://youtube.com", label: "YouTube" },
+  { Icon: LinkedInIcon, href: "https://linkedin.com", label: "LinkedIn" },
 ];
-
-/* ============= Main Component ============= */
 
 export default function Footer() {
   return (
     <footer
       className="relative px-6 pt-14 pb-8 overflow-hidden"
       style={{
-        background:
-          "linear-gradient(180deg, #0a0f1e 0%, #050810 100%)",
+        background: "linear-gradient(180deg, #0a0f1e 0%, #050810 100%)",
       }}
     >
-      {/* Subtle background glow */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full blur-3xl opacity-15 -z-0"
         style={{
-          backgroundImage:
-            "radial-gradient(circle, #03856b, transparent 70%)",
+          backgroundImage: "radial-gradient(circle, #03856b, transparent 70%)",
         }}
       />
 
       <div className="max-w-6xl mx-auto relative z-10">
-        {/* Main footer grid */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-10">
-          {/* Brand column */}
           <div className="col-span-2">
             <div className="flex flex-col leading-none mb-3">
               <span className="text-2xl font-black tracking-tight text-white">
@@ -136,12 +125,13 @@ export default function Footer() {
               Built for creators with DM automation.
             </p>
 
-            {/* Social icons */}
             <div className="flex gap-2">
               {socials.map(({ Icon, href, label }) => (
                 <a
                   key={label}
                   href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label={label}
                   className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-all hover:-translate-y-0.5"
                   style={{
@@ -155,7 +145,6 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Link columns */}
           {columns.map((col) => (
             <div key={col.title}>
               <h4 className="text-white font-bold text-sm mb-4 tracking-wide">
@@ -177,7 +166,6 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Divider */}
         <div
           className="h-px w-full mb-6"
           style={{
@@ -186,11 +174,9 @@ export default function Footer() {
           }}
         />
 
-        {/* Bottom bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-gray-500">
-            © {new Date().getFullYear()} Flowchat. All rights reserved. Made in
-            India 🇮🇳
+            © {new Date().getFullYear()} Flowchat. All rights reserved. Domain: earnwithads.in
           </p>
 
           <div className="flex items-center gap-4 flex-wrap justify-center">
