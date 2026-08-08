@@ -34,10 +34,21 @@ interface PaymentLog {
 export default function AdminDashboardPage() {
   /* ============= Auth State ============= */
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [usernameInput, setUsernameInput] = useState("admin");
+  const [usernameInput, setUsernameInput] = useState("ashishkushwaha1822@gmail.com");
   const [passwordInput, setPasswordInput] = useState("FlowchatAdmin2026!");
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  /* ============= Forgot Password State ============= */
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("ashishkushwaha1822@gmail.com");
+  const [forgotOtp, setForgotOtp] = useState("");
+  const [generatedOtp, setGeneratedOtp] = useState("");
+  const [newAdminUsername, setNewAdminUsername] = useState("admin");
+  const [newAdminPassword, setNewAdminPassword] = useState("");
+  const [forgotStep, setForgotStep] = useState<"email" | "verify">("email");
+  const [forgotMsg, setForgotMsg] = useState("");
+  const [forgotErr, setForgotErr] = useState("");
 
   /* ============= Menu Tab State ============= */
   const [activeMenu, setActiveMenu] = useState<
@@ -127,6 +138,58 @@ export default function AdminDashboardPage() {
       console.error("Admin data load error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRequestOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotErr("");
+    setForgotMsg("");
+
+    try {
+      const res = await fetch("/api/admin/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Request failed");
+
+      setGeneratedOtp(data.otp);
+      setForgotStep("verify");
+      setForgotMsg(`6-Digit OTP Generated: ${data.otp}`);
+    } catch (err: any) {
+      setForgotErr(err.message || "Error requesting OTP");
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotErr("");
+    setForgotMsg("");
+
+    try {
+      const res = await fetch("/api/admin/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: forgotEmail,
+          otp: forgotOtp,
+          newUsername: newAdminUsername,
+          newPassword: newAdminPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Reset failed");
+
+      alert("🎉 Password Reset Successful! You can now login with your new password.");
+      setShowForgotModal(false);
+      setPasswordInput(newAdminPassword);
+      setUsernameInput(newAdminUsername);
+    } catch (err: any) {
+      setForgotErr(err.message || "Error resetting password");
     }
   };
 
@@ -237,7 +300,7 @@ export default function AdminDashboardPage() {
             </div>
             <h1 className="text-3xl font-black text-white">Flowchat Admin</h1>
             <p className="text-xs text-gray-400">
-              Enter master credentials to manage users, payments, and free grants.
+              Login via Username or Personal Gmail (ashishkushwaha1822@gmail.com)
             </p>
           </div>
 
@@ -250,27 +313,42 @@ export default function AdminDashboardPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-gray-300 mb-1.5">
-                Admin Username
+                Admin Username or Gmail
               </label>
               <input
                 type="text"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
+                placeholder="ashishkushwaha1822@gmail.com or admin"
                 required
-                className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-300 mb-1.5">
-                Admin Password
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold text-gray-300">
+                  Admin Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotModal(true);
+                    setForgotStep("email");
+                    setForgotErr("");
+                    setForgotMsg("");
+                  }}
+                  className="text-xs text-emerald-400 font-semibold hover:underline"
+                >
+                  Forgot Password?
+                </button>
+              </div>
               <input
                 type="password"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 required
-                className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -284,9 +362,114 @@ export default function AdminDashboardPage() {
           </form>
 
           <div className="pt-4 border-t border-gray-700/50 text-center text-[11px] text-gray-500">
-            Domain: <strong>earnwithads.in</strong> | Flowchat Master Admin 2026
+            Registered Admin Gmail: <strong>ashishkushwaha1822@gmail.com</strong>
           </div>
         </div>
+
+        {/* FORGOT PASSWORD MODAL */}
+        {showForgotModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-gray-800 rounded-3xl max-w-md w-full p-6 md:p-8 border border-gray-700 shadow-2xl space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-black text-white">🔐 Reset Admin Password</h3>
+                <button
+                  onClick={() => setShowForgotModal(false)}
+                  className="text-gray-400 hover:text-white font-bold text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {forgotErr && (
+                <div className="p-3 rounded-xl bg-red-500/20 text-red-300 text-xs font-semibold">
+                  {forgotErr}
+                </div>
+              )}
+
+              {forgotMsg && (
+                <div className="p-3 rounded-xl bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono">
+                  {forgotMsg}
+                </div>
+              )}
+
+              {forgotStep === "email" ? (
+                <form onSubmit={handleRequestOtp} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-300 mb-1">
+                      Enter Admin Personal Gmail Address:
+                    </label>
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      required
+                      placeholder="ashishkushwaha1822@gmail.com"
+                      className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-3 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
+                  >
+                    Generate Reset OTP Code →
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-300 mb-1">
+                      Enter 6-Digit OTP Code:
+                    </label>
+                    <input
+                      type="text"
+                      value={forgotOtp}
+                      onChange={(e) => setForgotOtp(e.target.value)}
+                      placeholder={`Enter ${generatedOtp || "OTP"}`}
+                      required
+                      className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-300 mb-1">
+                      New Custom Admin Username:
+                    </label>
+                    <input
+                      type="text"
+                      value={newAdminUsername}
+                      onChange={(e) => setNewAdminUsername(e.target.value)}
+                      required
+                      placeholder="admin or your name"
+                      className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-300 mb-1">
+                      New Custom Admin Password:
+                    </label>
+                    <input
+                      type="password"
+                      value={newAdminPassword}
+                      onChange={(e) => setNewAdminPassword(e.target.value)}
+                      required
+                      placeholder="Enter new password"
+                      className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-3 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
+                  >
+                    Confirm & Set New Password →
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -296,9 +479,7 @@ export default function AdminDashboardPage() {
      ========================================================================= */
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col md:flex-row">
-      {/* ============================================= */}
-      {/* SIDEBAR NAVIGATION MENU                       */}
-      {/* ============================================= */}
+      {/* SIDEBAR NAVIGATION MENU */}
       <aside className="w-full md:w-64 bg-gray-900 border-r border-gray-800 p-6 flex flex-col justify-between flex-shrink-0">
         <div className="space-y-8">
           <div>
@@ -359,7 +540,7 @@ export default function AdminDashboardPage() {
 
         <div className="pt-6 border-t border-gray-800 space-y-3">
           <div className="text-[11px] text-gray-500">
-            Logged in as <strong>Master Admin</strong>
+            Gmail: <strong className="text-emerald-400">ashishkushwaha1822@gmail.com</strong>
           </div>
           <button
             onClick={handleLogout}
@@ -370,9 +551,7 @@ export default function AdminDashboardPage() {
         </div>
       </aside>
 
-      {/* ============================================= */}
-      {/* MAIN ADMIN CONTENT AREA                       */}
-      {/* ============================================= */}
+      {/* MAIN ADMIN CONTENT AREA */}
       <main className="flex-1 p-6 md:p-10 overflow-y-auto space-y-8">
         {/* STATS OVERVIEW HEADER CARDS */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -425,9 +604,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* =========================================================================
-           MENU 1: USER MANAGEMENT & GMAILS
-           ========================================================================= */}
+        {/* MENU 1: USER MANAGEMENT & GMAILS */}
         {activeMenu === "users" && (
           <section className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -565,7 +742,7 @@ export default function AdminDashboardPage() {
                               {user.totalDmsSent || 0} DMs
                             </td>
 
-                            {/* Actions - ALWAYS VISIBLE REVOKE & GRANT BUTTONS */}
+                            {/* Actions */}
                             <td className="p-4 text-right space-x-2">
                               <button
                                 onClick={() => setSelectedUser(user)}
@@ -592,9 +769,7 @@ export default function AdminDashboardPage() {
           </section>
         )}
 
-        {/* =========================================================================
-           MENU 2: REVENUE & USER ANALYTICS
-           ========================================================================= */}
+        {/* MENU 2: REVENUE & USER ANALYTICS */}
         {activeMenu === "analytics" && (
           <section className="space-y-6">
             <div>
@@ -661,9 +836,7 @@ export default function AdminDashboardPage() {
           </section>
         )}
 
-        {/* =========================================================================
-           MENU 3: RAZORPAY & PAYMENT LOGS
-           ========================================================================= */}
+        {/* MENU 3: RAZORPAY & PAYMENT LOGS */}
         {activeMenu === "payments" && (
           <section className="space-y-6">
             <div>
@@ -774,9 +947,7 @@ export default function AdminDashboardPage() {
           </section>
         )}
 
-        {/* =========================================================================
-           MENU 4: WEBHOOK & SYSTEM STATUS
-           ========================================================================= */}
+        {/* MENU 4: WEBHOOK & SYSTEM STATUS */}
         {activeMenu === "system" && (
           <section className="space-y-6">
             <div>
@@ -819,9 +990,7 @@ export default function AdminDashboardPage() {
         )}
       </main>
 
-      {/* =========================================================================
-         GRANT FREE ACCESS MODAL (POPUP)
-         ========================================================================= */}
+      {/* GRANT FREE ACCESS MODAL (POPUP) */}
       {selectedUser && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 rounded-3xl max-w-md w-full p-6 md:p-8 border border-gray-800 shadow-2xl space-y-6">
