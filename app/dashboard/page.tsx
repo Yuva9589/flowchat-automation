@@ -1,18 +1,43 @@
 import { currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
-import { syncClerkUserToSupabase } from "@/lib/syncUser";
+import { syncClerkUserToSupabase, getCurrentSupabaseUser } from "@/lib/syncUser";
+import { createServerSupabaseClient } from "@/lib/supabase";
 
 export default async function DashboardHomePage() {
   const user = await currentUser();
 
   // Auto-sync Clerk user to Supabase on every dashboard visit
-  await syncClerkUserToSupabase();
+  const dbUser = await syncClerkUserToSupabase();
+
+  let totalDmsSent = 0;
+  let totalClicks = 0;
+  let activeRulesCount = 0;
+
+  if (dbUser) {
+    try {
+      const supabase = createServerSupabaseClient();
+      const { data: automations } = await supabase
+        .from("automations")
+        .select("*")
+        .eq("user_id", dbUser.id);
+
+      (automations || []).forEach((a: any) => {
+        totalDmsSent += a.dms_sent || 0;
+        totalClicks += a.clicks || 0;
+        if (a.status === "active") {
+          activeRulesCount += 1;
+        }
+      });
+    } catch (err) {
+      console.error("Dashboard stats error:", err);
+    }
+  }
 
   const stats = [
-    { label: "DMs Sent", value: "0", change: "+0 this week", color: "#03856b" },
-    { label: "Link Clicks", value: "0", change: "+0 this week", color: "#8b5cf6" },
-    { label: "New Followers", value: "0", change: "+0 this week", color: "#f97316" },
-    { label: "Conversion", value: "0%", change: "Start automating", color: "#ec4899" },
+    { label: "DMs Sent", value: totalDmsSent.toString(), change: "Total Automations Sent", color: "#03856b" },
+    { label: "Link Clicks", value: totalClicks.toString(), change: "Total Link Clicks", color: "#8b5cf6" },
+    { label: "Active Rules", value: activeRulesCount.toString(), change: "Active Automation Rules", color: "#f97316" },
+    { label: "Plan Status", value: dbUser?.custom_access_granted ? "Custom Free" : dbUser?.plan || "7-Day Trial", change: "Active Subscription", color: "#ec4899" },
   ];
 
   return (
@@ -40,7 +65,7 @@ export default async function DashboardHomePage() {
           >
             <p className="text-xs text-gray-500 font-medium mb-2">{s.label}</p>
             <p
-              className="text-3xl font-black leading-none"
+              className="text-3xl font-black leading-none capitalize"
               style={{ color: s.color }}
             >
               {s.value}
