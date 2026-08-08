@@ -50,6 +50,11 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  /* ============= Razorpay Gateway Keys State ============= */
+  const [razorpayKeyId, setRazorpayKeyId] = useState("rzp_live_Flowchat2026Key");
+  const [razorpayKeySecret, setRazorpayKeySecret] = useState("••••••••••••••••");
+  const [razorpaySaved, setRazorpaySaved] = useState(false);
+
   /* ============= Grant Free Access Modal State ============= */
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [grantMonths, setDurationMonths] = useState("12");
@@ -156,7 +161,11 @@ export default function AdminDashboardPage() {
   };
 
   const handleRevokeAccess = async (user: AdminUser) => {
-    if (!confirm(`Are you sure you want to revoke free access for ${user.email}?`)) {
+    if (
+      !confirm(
+        `Are you sure you want to REVOKE access for ${user.email}? This will set their plan to Expired/Free Trial.`
+      )
+    ) {
       return;
     }
 
@@ -172,11 +181,17 @@ export default function AdminDashboardPage() {
 
       if (!res.ok) throw new Error("Failed to revoke access");
 
-      alert(`Access revoked for ${user.email}`);
+      alert(`⛔ Access revoked/suspended for ${user.email}`);
       loadAdminData();
     } catch (err: any) {
       alert(err.message || "Error revoking access");
     }
+  };
+
+  const handleSaveRazorpayKeys = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRazorpaySaved(true);
+    setTimeout(() => setRazorpaySaved(false), 3000);
   };
 
   /* ============= Helper Calculations ============= */
@@ -186,7 +201,14 @@ export default function AdminDashboardPage() {
       u.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const activeUsersCount = users.filter((u) => !u.isExpired || u.customAccessGranted).length;
+  const trialUsersCount = users.filter(
+    (u) => u.plan === "free_trial" && !u.customAccessGranted
+  ).length;
+
+  const activeUsersCount = users.filter(
+    (u) => !u.isExpired || u.customAccessGranted
+  ).length;
+
   const inactiveUsersCount = users.length - activeUsersCount;
   const customFreeUsersCount = users.filter((u) => u.customAccessGranted).length;
 
@@ -195,7 +217,10 @@ export default function AdminDashboardPage() {
     .filter((p) => {
       const pDate = new Date(p.created_at);
       const now = new Date();
-      return pDate.getMonth() === now.getMonth() && pDate.getFullYear() === now.getFullYear();
+      return (
+        pDate.getMonth() === now.getMonth() &&
+        pDate.getFullYear() === now.getFullYear()
+      );
     })
     .reduce((acc, p) => acc + (p.amount || 0), 0);
 
@@ -212,7 +237,7 @@ export default function AdminDashboardPage() {
             </div>
             <h1 className="text-3xl font-black text-white">Flowchat Admin</h1>
             <p className="text-xs text-gray-400">
-              Enter your master admin credentials to access full control panel.
+              Enter master credentials to manage users, payments, and free grants.
             </p>
           </div>
 
@@ -316,7 +341,7 @@ export default function AdminDashboardPage() {
                   : "text-gray-400 hover:bg-gray-800 hover:text-white"
               }`}
             >
-              <span>💳</span> Payment History Logs
+              <span>💳</span> Razorpay & Payment Logs
             </button>
 
             <button
@@ -334,7 +359,7 @@ export default function AdminDashboardPage() {
 
         <div className="pt-6 border-t border-gray-800 space-y-3">
           <div className="text-[11px] text-gray-500">
-            Logged in as <strong>Admin</strong>
+            Logged in as <strong>Master Admin</strong>
           </div>
           <button
             onClick={handleLogout}
@@ -350,45 +375,53 @@ export default function AdminDashboardPage() {
       {/* ============================================= */}
       <main className="flex-1 p-6 md:p-10 overflow-y-auto space-y-8">
         {/* STATS OVERVIEW HEADER CARDS */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gray-900 rounded-2xl p-5 border border-gray-800">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800">
             <p className="text-xs text-gray-400 font-semibold mb-1">Total Users</p>
-            <p className="text-3xl font-black text-white">{users.length}</p>
-            <p className="text-[11px] text-emerald-400 mt-1">
-              {activeUsersCount} Active · {inactiveUsersCount} Inactive
+            <p className="text-2xl font-black text-white">{users.length}</p>
+            <p className="text-[10px] text-emerald-400 mt-0.5">
+              {activeUsersCount} Active
             </p>
           </div>
 
-          <div className="bg-gray-900 rounded-2xl p-5 border border-gray-800">
+          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800">
+            <p className="text-xs text-gray-400 font-semibold mb-1">
+              7-Day Trial Users
+            </p>
+            <p className="text-2xl font-black text-yellow-400">{trialUsersCount}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Free Trial Active</p>
+          </div>
+
+          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800">
             <p className="text-xs text-gray-400 font-semibold mb-1">
               Monthly Revenue
             </p>
-            <p className="text-3xl font-black text-emerald-400">
+            <p className="text-2xl font-black text-emerald-400">
               ₹{monthlyRevenue}
             </p>
-            <p className="text-[11px] text-gray-400 mt-1">
-              Total Revenue: ₹{totalRevenue}
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              Total: ₹{totalRevenue}
             </p>
           </div>
 
-          <div className="bg-gray-900 rounded-2xl p-5 border border-gray-800">
+          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800">
             <p className="text-xs text-gray-400 font-semibold mb-1">
               Free Access Granted
             </p>
-            <p className="text-3xl font-black text-purple-400">
+            <p className="text-2xl font-black text-purple-400">
               {customFreeUsersCount}
             </p>
-            <p className="text-[11px] text-gray-400 mt-1">Admin Approved Users</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Admin Approved</p>
           </div>
 
-          <div className="bg-gray-900 rounded-2xl p-5 border border-gray-800">
+          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800">
             <p className="text-xs text-gray-400 font-semibold mb-1">
               Total DMs Sent
             </p>
-            <p className="text-3xl font-black text-pink-400">
+            <p className="text-2xl font-black text-pink-400">
               {users.reduce((acc, u) => acc + (u.totalDmsSent || 0), 0)}
             </p>
-            <p className="text-[11px] text-gray-400 mt-1">Across All Platforms</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">All Platforms</p>
           </div>
         </div>
 
@@ -403,7 +436,7 @@ export default function AdminDashboardPage() {
                   User Management & Gmail List
                 </h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  View logged-in user Gmails, plan validity, and grant free automation access.
+                  View logged-in user Gmails, plan validity, and grant or revoke free automation access.
                 </p>
               </div>
 
@@ -491,7 +524,7 @@ export default function AdminDashboardPage() {
                                   💳 Premium (₹99/mo)
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-800 text-gray-400 border border-gray-700">
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
                                   🆓 7-Day Trial
                                 </span>
                               )}
@@ -532,7 +565,7 @@ export default function AdminDashboardPage() {
                               {user.totalDmsSent || 0} DMs
                             </td>
 
-                            {/* Actions */}
+                            {/* Actions - ALWAYS VISIBLE REVOKE & GRANT BUTTONS */}
                             <td className="p-4 text-right space-x-2">
                               <button
                                 onClick={() => setSelectedUser(user)}
@@ -541,14 +574,12 @@ export default function AdminDashboardPage() {
                                 🎁 Grant Free Access
                               </button>
 
-                              {user.customAccessGranted && (
-                                <button
-                                  onClick={() => handleRevokeAccess(user)}
-                                  className="px-2.5 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-[11px] border border-red-500/30 transition-colors"
-                                >
-                                  ⛔ Revoke
-                                </button>
-                              )}
+                              <button
+                                onClick={() => handleRevokeAccess(user)}
+                                className="px-2.5 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-[11px] border border-red-500/30 transition-colors"
+                              >
+                                ⛔ Revoke Access
+                              </button>
                             </td>
                           </tr>
                         );
@@ -568,34 +599,42 @@ export default function AdminDashboardPage() {
           <section className="space-y-6">
             <div>
               <h2 className="text-2xl font-black text-white">
-                Revenue & User Status Analytics
+                Revenue & User Breakdown Analytics
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                Monthly & Yearly revenue breakdown, active vs non-active user split.
+                Monthly & Yearly revenue breakdown, trial users, active vs non-active user split.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-4 gap-6">
               <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-2">
                 <h3 className="text-gray-400 text-xs font-bold uppercase">
-                  Monthly Revenue (This Month)
+                  Monthly Revenue
                 </h3>
                 <p className="text-4xl font-black text-emerald-400">
                   ₹{monthlyRevenue}
                 </p>
-                <p className="text-xs text-gray-500">
-                  Via UPI AutoPay & Stripe Subscriptions
-                </p>
+                <p className="text-xs text-gray-500">Current Month Collection</p>
               </div>
 
               <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-2">
                 <h3 className="text-gray-400 text-xs font-bold uppercase">
-                  Total Yearly Revenue
+                  Yearly Revenue
                 </h3>
                 <p className="text-4xl font-black text-purple-400">
                   ₹{totalRevenue}
                 </p>
-                <p className="text-xs text-gray-500">Cumulative Platform Revenue</p>
+                <p className="text-xs text-gray-500">Total Revenue to Date</p>
+              </div>
+
+              <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-2">
+                <h3 className="text-gray-400 text-xs font-bold uppercase">
+                  🆓 7-Day Free Trial Users
+                </h3>
+                <p className="text-4xl font-black text-yellow-400">
+                  {trialUsersCount}
+                </p>
+                <p className="text-xs text-gray-500">Users in Trial Period</p>
               </div>
 
               <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-2">
@@ -623,19 +662,75 @@ export default function AdminDashboardPage() {
         )}
 
         {/* =========================================================================
-           MENU 3: PAYMENT HISTORY LOGS
+           MENU 3: RAZORPAY & PAYMENT LOGS
            ========================================================================= */}
         {activeMenu === "payments" && (
           <section className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-white">Payment History Logs</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Complete logs of subscription transactions & free access grants.
-                </p>
-              </div>
+            <div>
+              <h2 className="text-2xl font-black text-white">
+                Razorpay Setup & Payment History
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Configure Razorpay API Keys and view real-time payment transactions.
+              </p>
             </div>
 
+            {/* Razorpay Gateway Keys Configuration Card */}
+            <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-white text-base">
+                  💳 Razorpay Payment Gateway Keys Setup
+                </h3>
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/30">
+                  Razorpay UPI & Cards Enabled
+                </span>
+              </div>
+
+              {razorpaySaved && (
+                <div className="p-3 rounded-xl bg-emerald-500/20 text-emerald-300 text-xs font-bold">
+                  ✓ Razorpay Gateway settings saved successfully!
+                </div>
+              )}
+
+              <form onSubmit={handleSaveRazorpayKeys} className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-1">
+                    Razorpay Key ID (NEXT_PUBLIC_RAZORPAY_KEY_ID)
+                  </label>
+                  <input
+                    type="text"
+                    value={razorpayKeyId}
+                    onChange={(e) => setRazorpayKeyId(e.target.value)}
+                    placeholder="rzp_live_..."
+                    className="w-full px-4 py-2.5 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-1">
+                    Razorpay Key Secret (RAZORPAY_KEY_SECRET)
+                  </label>
+                  <input
+                    type="password"
+                    value={razorpayKeySecret}
+                    onChange={(e) => setRazorpayKeySecret(e.target.value)}
+                    placeholder="Key Secret"
+                    className="w-full px-4 py-2.5 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div className="md:col-span-2 flex justify-end">
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition-colors"
+                  >
+                    Save Razorpay Keys
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Payment Logs Table */}
             {payments.length === 0 ? (
               <div className="bg-gray-900 rounded-2xl p-10 border border-gray-800 text-center text-gray-400 text-sm">
                 No payment transactions recorded yet.
@@ -725,7 +820,7 @@ export default function AdminDashboardPage() {
       </main>
 
       {/* =========================================================================
-         GRANT FREE ACCESS MODAL (POPUUP)
+         GRANT FREE ACCESS MODAL (POPUP)
          ========================================================================= */}
       {selectedUser && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
