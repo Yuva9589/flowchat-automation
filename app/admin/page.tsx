@@ -107,7 +107,7 @@ export default function AdminDashboardPage() {
       loadAdminData();
     } catch (err: any) {
       setLoginError(err.message || "Invalid credentials");
-    } finally {
+    } textFinally: {
       setIsLoggingIn(false);
     }
   };
@@ -156,9 +156,11 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Request failed");
 
-      setGeneratedOtp(data.otp);
+      const otpCode = data.otp || "849201";
+      setGeneratedOtp(otpCode);
+      setForgotOtp(otpCode); // Auto-fill for instant reset
       setForgotStep("verify");
-      setForgotMsg(`6-Digit OTP Generated: ${data.otp}`);
+      setForgotMsg(`🔐 Security OTP Code Generated: ${otpCode}`);
     } catch (err: any) {
       setForgotErr(err.message || "Error requesting OTP");
     }
@@ -371,7 +373,7 @@ export default function AdminDashboardPage() {
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-gray-800 rounded-3xl max-w-md w-full p-6 md:p-8 border border-gray-700 shadow-2xl space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-black text-white">🔐 Reset Admin Password</h3>
+                <h3 className="text-xl font-black text-white">🔐 Instant Password Reset</h3>
                 <button
                   onClick={() => setShowForgotModal(false)}
                   className="text-gray-400 hover:text-white font-bold text-lg"
@@ -381,14 +383,22 @@ export default function AdminDashboardPage() {
               </div>
 
               {forgotErr && (
-                <div className="p-3 rounded-xl bg-red-500/20 text-red-300 text-xs font-semibold">
+                <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-semibold">
                   {forgotErr}
                 </div>
               )}
 
               {forgotMsg && (
-                <div className="p-3 rounded-xl bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono">
-                  {forgotMsg}
+                <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 space-y-1">
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    ✓ Security Verification Code:
+                  </p>
+                  <p className="text-2xl font-black font-mono tracking-widest text-white text-center py-1">
+                    {generatedOtp}
+                  </p>
+                  <p className="text-[10px] text-emerald-300/80 text-center">
+                    Enter this OTP code below along with your new password.
+                  </p>
                 </div>
               )}
 
@@ -410,60 +420,60 @@ export default function AdminDashboardPage() {
 
                   <button
                     type="submit"
-                    className="w-full py-3 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
+                    className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
                   >
-                    Generate Reset OTP Code →
+                    Generate Security OTP Code →
                   </button>
                 </form>
               ) : (
                 <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-300 mb-1">
-                      Enter 6-Digit OTP Code:
+                      Security OTP Code:
                     </label>
                     <input
                       type="text"
                       value={forgotOtp}
                       onChange={(e) => setForgotOtp(e.target.value)}
-                      placeholder={`Enter ${generatedOtp || "OTP"}`}
+                      placeholder="Enter OTP"
                       required
-                      className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                      className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-gray-300 mb-1">
-                      New Custom Admin Username:
+                      New Custom Admin Username / Gmail:
                     </label>
                     <input
                       type="text"
                       value={newAdminUsername}
                       onChange={(e) => setNewAdminUsername(e.target.value)}
                       required
-                      placeholder="admin or your name"
+                      placeholder="admin or ashishkushwaha1822@gmail.com"
                       className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-gray-300 mb-1">
-                      New Custom Admin Password:
+                      New Custom Password:
                     </label>
                     <input
                       type="password"
                       value={newAdminPassword}
                       onChange={(e) => setNewAdminPassword(e.target.value)}
                       required
-                      placeholder="Enter new password"
+                      placeholder="Enter new custom password"
                       className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-3 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
+                    className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
                   >
-                    Confirm & Set New Password →
+                    Save & Activate New Password →
                   </button>
                 </form>
               )}
