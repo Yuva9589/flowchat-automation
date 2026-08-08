@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUser, UserButton, SignInButton } from "@clerk/nextjs";
 
 /* ============= Admin User Interface Types ============= */
 
@@ -31,24 +32,10 @@ interface PaymentLog {
   created_at: string;
 }
 
-export default function AdminDashboardPage() {
-  /* ============= Auth State ============= */
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [usernameInput, setUsernameInput] = useState("ashishkushwaha1822@gmail.com");
-  const [passwordInput, setPasswordInput] = useState("FlowchatAdmin2026!");
-  const [loginError, setLoginError] = useState("");
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+const ADMIN_EMAILS = ["ashishkushwaha1822@gmail.com"];
 
-  /* ============= Forgot Password State ============= */
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState("ashishkushwaha1822@gmail.com");
-  const [forgotOtp, setForgotOtp] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
-  const [newAdminUsername, setNewAdminUsername] = useState("admin");
-  const [newAdminPassword, setNewAdminPassword] = useState("");
-  const [forgotStep, setForgotStep] = useState<"email" | "verify">("email");
-  const [forgotMsg, setForgotMsg] = useState("");
-  const [forgotErr, setForgotErr] = useState("");
+export default function AdminDashboardPage() {
+  const { isLoaded, isSignedIn, user } = useUser();
 
   /* ============= Menu Tab State ============= */
   const [activeMenu, setActiveMenu] = useState<
@@ -72,50 +59,14 @@ export default function AdminDashboardPage() {
   const [isLifetime, setIsLifetime] = useState(false);
   const [granting, setGranting] = useState(false);
 
-  /* Check session storage on mount */
+  const currentUserEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase().trim() || "";
+  const isMasterAdmin = ADMIN_EMAILS.includes(currentUserEmail);
+
   useEffect(() => {
-    const savedToken = sessionStorage.getItem("flowchat_admin_token");
-    if (savedToken) {
-      setIsAuthenticated(true);
+    if (isSignedIn && isMasterAdmin) {
       loadAdminData();
     }
-  }, []);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoggingIn(true);
-    setLoginError("");
-
-    try {
-      const res = await fetch("/api/admin/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: usernameInput,
-          password: passwordInput,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Login failed");
-      }
-
-      sessionStorage.setItem("flowchat_admin_token", data.token);
-      setIsAuthenticated(true);
-      loadAdminData();
-    } catch (err: any) {
-      setLoginError(err.message || "Invalid credentials");
-    } textFinally: {
-      setIsLoggingIn(false);
-    }
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("flowchat_admin_token");
-    setIsAuthenticated(false);
-  };
+  }, [isSignedIn, isMasterAdmin]);
 
   const loadAdminData = async () => {
     setLoading(true);
@@ -138,60 +89,6 @@ export default function AdminDashboardPage() {
       console.error("Admin data load error:", err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleRequestOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotErr("");
-    setForgotMsg("");
-
-    try {
-      const res = await fetch("/api/admin/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Request failed");
-
-      const otpCode = data.otp || "849201";
-      setGeneratedOtp(otpCode);
-      setForgotOtp(otpCode); // Auto-fill for instant reset
-      setForgotStep("verify");
-      setForgotMsg(`🔐 Security OTP Code Generated: ${otpCode}`);
-    } catch (err: any) {
-      setForgotErr(err.message || "Error requesting OTP");
-    }
-  };
-
-  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotErr("");
-    setForgotMsg("");
-
-    try {
-      const res = await fetch("/api/admin/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: forgotEmail,
-          otp: forgotOtp,
-          newUsername: newAdminUsername,
-          newPassword: newAdminPassword,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Reset failed");
-
-      alert("🎉 Password Reset Successful! You can now login with your new password.");
-      setShowForgotModal(false);
-      setPasswordInput(newAdminPassword);
-      setUsernameInput(newAdminUsername);
-    } catch (err: any) {
-      setForgotErr(err.message || "Error resetting password");
     }
   };
 
@@ -225,10 +122,10 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleRevokeAccess = async (user: AdminUser) => {
+  const handleRevokeAccess = async (userToRevoke: AdminUser) => {
     if (
       !confirm(
-        `Are you sure you want to REVOKE access for ${user.email}? This will set their plan to Expired/Free Trial.`
+        `Are you sure you want to REVOKE access for ${userToRevoke.email}? This will set their plan to Expired/Free Trial.`
       )
     ) {
       return;
@@ -239,14 +136,14 @@ export default function AdminDashboardPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          targetUserId: user.id,
+          targetUserId: userToRevoke.id,
           revoke: true,
         }),
       });
 
       if (!res.ok) throw new Error("Failed to revoke access");
 
-      alert(`⛔ Access revoked/suspended for ${user.email}`);
+      alert(`⛔ Access revoked/suspended for ${userToRevoke.email}`);
       loadAdminData();
     } catch (err: any) {
       alert(err.message || "Error revoking access");
@@ -259,7 +156,7 @@ export default function AdminDashboardPage() {
     setTimeout(() => setRazorpaySaved(false), 3000);
   };
 
-  /* ============= Helper Calculations ============= */
+  /* Helper Calculations */
   const filteredUsers = users.filter(
     (u) =>
       u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -289,204 +186,78 @@ export default function AdminDashboardPage() {
     })
     .reduce((acc, p) => acc + (p.amount || 0), 0);
 
-  /* =========================================================================
-     SCREEN 1: LOGIN SCREEN (If Not Authenticated)
-     ========================================================================= */
-  if (!isAuthenticated) {
+  /* Loading State */
+  if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-gray-800 rounded-3xl p-8 border border-gray-700 shadow-2xl space-y-6">
-          <div className="text-center space-y-2">
-            <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
-              Master Admin Control
-            </div>
-            <h1 className="text-3xl font-black text-white">Flowchat Admin</h1>
-            <p className="text-xs text-gray-400">
-              Login via Username or Personal Gmail (ashishkushwaha1822@gmail.com)
-            </p>
-          </div>
-
-          {loginError && (
-            <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-xs text-center font-medium">
-              {loginError}
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-300 mb-1.5">
-                Admin Username or Gmail
-              </label>
-              <input
-                type="text"
-                value={usernameInput}
-                onChange={(e) => setUsernameInput(e.target.value)}
-                placeholder="ashishkushwaha1822@gmail.com or admin"
-                required
-                className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-gray-300">
-                  Admin Password
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForgotModal(true);
-                    setForgotStep("email");
-                    setForgotErr("");
-                    setForgotMsg("");
-                  }}
-                  className="text-xs text-emerald-400 font-semibold hover:underline"
-                >
-                  Forgot Password?
-                </button>
-              </div>
-              <input
-                type="password"
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoggingIn}
-              className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-sm transition-colors shadow-lg"
-            >
-              {isLoggingIn ? "Authenticating..." : "Login to Admin Panel →"}
-            </button>
-          </form>
-
-          <div className="pt-4 border-t border-gray-700/50 text-center text-[11px] text-gray-500">
-            Registered Admin Gmail: <strong>ashishkushwaha1822@gmail.com</strong>
-          </div>
-        </div>
-
-        {/* FORGOT PASSWORD MODAL */}
-        {showForgotModal && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-gray-800 rounded-3xl max-w-md w-full p-6 md:p-8 border border-gray-700 shadow-2xl space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-black text-white">🔐 Instant Password Reset</h3>
-                <button
-                  onClick={() => setShowForgotModal(false)}
-                  className="text-gray-400 hover:text-white font-bold text-lg"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {forgotErr && (
-                <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-semibold">
-                  {forgotErr}
-                </div>
-              )}
-
-              {forgotMsg && (
-                <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 space-y-1">
-                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                    ✓ Security Verification Code:
-                  </p>
-                  <p className="text-2xl font-black font-mono tracking-widest text-white text-center py-1">
-                    {generatedOtp}
-                  </p>
-                  <p className="text-[10px] text-emerald-300/80 text-center">
-                    Enter this OTP code below along with your new password.
-                  </p>
-                </div>
-              )}
-
-              {forgotStep === "email" ? (
-                <form onSubmit={handleRequestOtp} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      Enter Admin Personal Gmail Address:
-                    </label>
-                    <input
-                      type="email"
-                      value={forgotEmail}
-                      onChange={(e) => setForgotEmail(e.target.value)}
-                      required
-                      placeholder="ashishkushwaha1822@gmail.com"
-                      className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
-                  >
-                    Generate Security OTP Code →
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      Security OTP Code:
-                    </label>
-                    <input
-                      type="text"
-                      value={forgotOtp}
-                      onChange={(e) => setForgotOtp(e.target.value)}
-                      placeholder="Enter OTP"
-                      required
-                      className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      New Custom Admin Username / Gmail:
-                    </label>
-                    <input
-                      type="text"
-                      value={newAdminUsername}
-                      onChange={(e) => setNewAdminUsername(e.target.value)}
-                      required
-                      placeholder="admin or ashishkushwaha1822@gmail.com"
-                      className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      New Custom Password:
-                    </label>
-                    <input
-                      type="password"
-                      value={newAdminPassword}
-                      onChange={(e) => setNewAdminPassword(e.target.value)}
-                      required
-                      placeholder="Enter new custom password"
-                      className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
-                  >
-                    Save & Activate New Password →
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        )}
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
+        <p className="text-sm font-semibold text-gray-400">Verifying Admin Permissions...</p>
       </div>
     );
   }
 
-  /* =========================================================================
-     SCREEN 2: FULL ADMIN DASHBOARD (When Authenticated)
-     ========================================================================= */
+  /* SCREEN 1: NOT SIGNED IN */
+  if (!isSignedIn) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-gray-800 shadow-2xl space-y-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-2xl mx-auto border border-emerald-500/30">
+            🔒
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black text-white">Master Admin Access</h1>
+            <p className="text-xs text-gray-400">
+              Sign in with your Master Admin Gmail address (<code>ashishkushwaha1822@gmail.com</code>) to unlock full control.
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <SignInButton mode="modal">
+              <button className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-sm shadow-lg transition-colors">
+                Sign In with Master Gmail →
+              </button>
+            </SignInButton>
+          </div>
+
+          <p className="text-[11px] text-gray-500 pt-2 border-t border-gray-800">
+            Forgot Password? Click Sign In above and select &ldquo;Forgot password?&rdquo; to receive an official reset email directly to your Gmail inbox.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  /* SCREEN 2: SIGNED IN BUT NOT MASTER ADMIN EMAIL */
+  if (!isMasterAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-red-500/30 shadow-2xl space-y-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/20 text-red-400 font-bold flex items-center justify-center text-2xl mx-auto border border-red-500/30">
+            ⛔
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black text-white">403 Access Denied</h1>
+            <p className="text-xs text-gray-400">
+              Your logged in email (<code>{currentUserEmail}</code>) is NOT authorized for Master Admin Control.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-gray-800/80 border border-gray-700/80 text-xs text-gray-300">
+            Please log out and sign in with the official Master Admin Gmail address:
+            <br />
+            <strong className="text-emerald-400 font-mono">ashishkushwaha1822@gmail.com</strong>
+          </div>
+
+          <div className="flex justify-center pt-2">
+            <UserButton />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* SCREEN 3: AUTHENTICATED MASTER ADMIN DASHBOARD */
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col md:flex-row">
       {/* SIDEBAR NAVIGATION MENU */}
@@ -548,16 +319,12 @@ export default function AdminDashboardPage() {
           </nav>
         </div>
 
-        <div className="pt-6 border-t border-gray-800 space-y-3">
-          <div className="text-[11px] text-gray-500">
-            Gmail: <strong className="text-emerald-400">ashishkushwaha1822@gmail.com</strong>
+        <div className="pt-6 border-t border-gray-800 flex items-center justify-between">
+          <div className="text-[11px] text-gray-400 min-w-0">
+            <p className="font-bold text-white truncate">{user.firstName || "Master Admin"}</p>
+            <p className="text-[10px] text-emerald-400 font-mono truncate">{currentUserEmail}</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="w-full py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/20 transition-colors"
-          >
-            🔒 Logout Admin
-          </button>
+          <UserButton />
         </div>
       </aside>
 
@@ -660,53 +427,51 @@ export default function AdminDashboardPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800/60">
-                      {filteredUsers.map((user) => {
+                      {filteredUsers.map((uItem) => {
                         const daysLeft = Math.ceil(
-                          (new Date(user.expiresAt).getTime() - Date.now()) /
+                          (new Date(uItem.expiresAt).getTime() - Date.now()) /
                             (1000 * 60 * 60 * 24)
                         );
 
                         return (
                           <tr
-                            key={user.id}
+                            key={uItem.id}
                             className="hover:bg-gray-800/40 transition-colors"
                           >
-                            {/* User & Gmail */}
                             <td className="p-4">
                               <div className="flex items-center gap-3">
-                                {user.avatarUrl ? (
+                                {uItem.avatarUrl ? (
                                   <img
-                                    src={user.avatarUrl}
-                                    alt={user.name}
+                                    src={uItem.avatarUrl}
+                                    alt={uItem.name}
                                     className="w-8 h-8 rounded-full border border-gray-700"
                                   />
                                 ) : (
                                   <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-xs">
-                                    {user.name[0] || "U"}
+                                    {uItem.name[0] || "U"}
                                   </div>
                                 )}
                                 <div>
                                   <p className="font-bold text-white text-xs">
-                                    {user.name}
+                                    {uItem.name}
                                   </p>
                                   <p className="text-[11px] text-emerald-400 font-mono">
-                                    {user.email}
+                                    {uItem.email}
                                   </p>
                                 </div>
                               </div>
                             </td>
 
-                            {/* Current Plan */}
                             <td className="p-4">
-                              {user.customAccessGranted ? (
+                              {uItem.customAccessGranted ? (
                                 <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
                                   🎁 Admin Free Access
                                 </span>
-                              ) : user.plan === "pro" ? (
+                              ) : uItem.plan === "pro" ? (
                                 <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                                   ⭐ Pro (Yearly ₹799)
                                 </span>
-                              ) : user.plan === "premium" ? (
+                              ) : uItem.plan === "premium" ? (
                                 <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
                                   💳 Premium (₹99/mo)
                                 </span>
@@ -717,15 +482,14 @@ export default function AdminDashboardPage() {
                               )}
                             </td>
 
-                            {/* Plan Validity */}
                             <td className="p-4">
-                              {user.customAccessGranted ? (
+                              {uItem.customAccessGranted ? (
                                 <span className="text-purple-300 font-bold text-[11px]">
-                                  {user.subscriptionMonths >= 900
+                                  {uItem.subscriptionMonths >= 900
                                     ? "♾️ Lifetime Free"
                                     : `${daysLeft > 0 ? daysLeft : 0} days remaining`}
                                 </span>
-                              ) : user.isExpired ? (
+                              ) : uItem.isExpired ? (
                                 <span className="text-red-400 font-bold text-[11px]">
                                   ⚠️ Expired
                                 </span>
@@ -736,33 +500,30 @@ export default function AdminDashboardPage() {
                               )}
                             </td>
 
-                            {/* Subscription Duration */}
                             <td className="p-4 text-xs font-medium text-gray-300">
-                              {user.customAccessGranted
-                                ? user.subscriptionMonths >= 900
+                              {uItem.customAccessGranted
+                                ? uItem.subscriptionMonths >= 900
                                   ? "Lifetime"
-                                  : `${user.subscriptionMonths} Months`
-                                : user.plan === "pro"
+                                  : `${uItem.subscriptionMonths} Months`
+                                : uItem.plan === "pro"
                                 ? "12 Months"
                                 : "1 Month"}
                             </td>
 
-                            {/* DMs Sent */}
                             <td className="p-4 font-mono text-white font-bold text-xs">
-                              {user.totalDmsSent || 0} DMs
+                              {uItem.totalDmsSent || 0} DMs
                             </td>
 
-                            {/* Actions */}
                             <td className="p-4 text-right space-x-2">
                               <button
-                                onClick={() => setSelectedUser(user)}
+                                onClick={() => setSelectedUser(uItem)}
                                 className="px-3 py-1.5 rounded-lg bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-[11px] shadow-sm transition-colors"
                               >
                                 🎁 Grant Free Access
                               </button>
 
                               <button
-                                onClick={() => handleRevokeAccess(user)}
+                                onClick={() => handleRevokeAccess(uItem)}
                                 className="px-2.5 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-[11px] border border-red-500/30 transition-colors"
                               >
                                 ⛔ Revoke Access
@@ -858,7 +619,6 @@ export default function AdminDashboardPage() {
               </p>
             </div>
 
-            {/* Razorpay Gateway Keys Configuration Card */}
             <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-white text-base">
@@ -913,7 +673,6 @@ export default function AdminDashboardPage() {
               </form>
             </div>
 
-            {/* Payment Logs Table */}
             {payments.length === 0 ? (
               <div className="bg-gray-900 rounded-2xl p-10 border border-gray-800 text-center text-gray-400 text-sm">
                 No payment transactions recorded yet.

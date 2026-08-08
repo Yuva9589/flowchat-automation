@@ -1,23 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { createServerSupabaseClient } from "@/lib/supabase";
-import { getCurrentSupabaseUser } from "@/lib/syncUser";
+
+const ADMIN_EMAILS = [
+  "ashishkushwaha1822@gmail.com",
+  process.env.ADMIN_EMAIL?.toLowerCase().trim() || "",
+].filter(Boolean);
 
 /**
  * POST /api/admin/grant-access
- * Grants free access, upgrades plan, or extends validity for a selected user
+ * Grants free access, upgrades plan, or revokes access
+ * Protected: Master Admin Only
  */
 export async function POST(req: NextRequest) {
   try {
-    const adminUser = await getCurrentSupabaseUser();
-    if (!adminUser) {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userEmail = clerkUser.emailAddresses[0]?.emailAddress?.toLowerCase().trim();
+    const isAdmin = ADMIN_EMAILS.some((email) => email === userEmail);
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Forbidden: Master Admin Access Only" },
+        { status: 403 }
+      );
     }
 
     const body = await req.json();
     const {
       targetUserId,
       plan = "custom_free",
-      durationMonths = 12, // Default 1 year free
+      durationMonths = 12,
       isLifetime = false,
       revoke = false,
     } = body;
@@ -31,7 +47,6 @@ export async function POST(req: NextRequest) {
     let updateData: any = {};
 
     if (revoke) {
-      // Revoke custom free access
       updateData = {
         plan: "free_trial",
         custom_access_granted: false,
@@ -39,7 +54,6 @@ export async function POST(req: NextRequest) {
         plan_expires_at: new Date().toISOString(),
       };
     } else {
-      // Grant custom access / extension
       const now = new Date();
       let expiresAt: Date;
 
@@ -56,7 +70,7 @@ export async function POST(req: NextRequest) {
         plan_expires_at: expiresAt.toISOString(),
       };
 
-      // Record in payments log
+      // Record transaction
       await supabase.from("payments").insert([
         {
           user_id: targetUserId,

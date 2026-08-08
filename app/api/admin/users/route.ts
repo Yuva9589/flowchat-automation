@@ -1,21 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { createServerSupabaseClient } from "@/lib/supabase";
-import { getCurrentSupabaseUser } from "@/lib/syncUser";
+
+const ADMIN_EMAILS = [
+  "ashishkushwaha1822@gmail.com",
+  process.env.ADMIN_EMAIL?.toLowerCase().trim() || "",
+].filter(Boolean);
 
 /**
  * GET /api/admin/users
  * Returns list of all registered users with their subscription status & stats
+ * Protected: Master Admin Only
  */
 export async function GET(req: NextRequest) {
   try {
-    const currentUser = await getCurrentSupabaseUser();
-    if (!currentUser) {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userEmail = clerkUser.emailAddresses[0]?.emailAddress?.toLowerCase().trim();
+
+    // Check if user is Master Admin
+    const isAdmin = ADMIN_EMAILS.some((email) => email === userEmail);
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Forbidden: Master Admin Access Only" },
+        { status: 403 }
+      );
     }
 
     const supabase = createServerSupabaseClient();
 
-    // Fetch all users
+    // Fetch all users from Supabase DB
     const { data: users, error: usersError } = await supabase
       .from("users")
       .select("*")
@@ -26,7 +44,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: usersError.message }, { status: 500 });
     }
 
-    // Fetch all automations to compute user stats
+    // Fetch all automations to compute stats
     const { data: automations } = await supabase.from("automations").select("*");
 
     const automationsByUser: Record<string, { count: number; dmsSent: number }> = {};
@@ -40,20 +58,13 @@ export async function GET(req: NextRequest) {
       automationsByUser[uid].dmsSent += auto.dms_sent || 0;
     });
 
-    // Format users for Admin Dashboard
     const formattedUsers = (users || []).map((u: any) => {
       const stats = automationsByUser[u.id] || { count: 0, dmsSent: 0 };
       const createdAt = u.created_at ? new Date(u.created_at) : new Date();
 
-      // Default plan calculations if not set in DB
       const plan = u.plan || (u.custom_access_granted ? "custom_free" : "free_trial");
-      
-      // Calculate trial / plan expiry date (default 7 days trial from signup if no plan_expires_at)
       const defaultTrialExpiry = new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
-      const expiresAt = u.plan_expires_at
-        ? new Date(u.plan_expires_at)
-        : defaultTrialExpiry;
-
+      const expiresAt = u.plan_expires_at ? new Date(u.plan_expires_at) : defaultTrialExpiry;
       const isExpired = new Date() > expiresAt && plan !== "custom_free";
 
       return {

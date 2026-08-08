@@ -1,16 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { createServerSupabaseClient } from "@/lib/supabase";
-import { getCurrentSupabaseUser } from "@/lib/syncUser";
+
+const ADMIN_EMAILS = [
+  "ashishkushwaha1822@gmail.com",
+  process.env.ADMIN_EMAIL?.toLowerCase().trim() || "",
+].filter(Boolean);
 
 /**
  * GET /api/admin/payments
- * Fetches all payment transactions and subscription history
+ * Fetches all payment transactions
  */
 export async function GET(req: NextRequest) {
   try {
-    const adminUser = await getCurrentSupabaseUser();
-    if (!adminUser) {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userEmail = clerkUser.emailAddresses[0]?.emailAddress?.toLowerCase().trim();
+    const isAdmin = ADMIN_EMAILS.some((email) => email === userEmail);
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Forbidden: Master Admin Access Only" },
+        { status: 403 }
+      );
     }
 
     const supabase = createServerSupabaseClient();
@@ -21,7 +36,6 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      // If table doesn't exist yet, return sample empty list
       return NextResponse.json({ payments: [] });
     }
 
@@ -33,17 +47,26 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/admin/payments
- * Manually record a payment or transaction
  */
 export async function POST(req: NextRequest) {
   try {
-    const adminUser = await getCurrentSupabaseUser();
-    if (!adminUser) {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userEmail = clerkUser.emailAddresses[0]?.emailAddress?.toLowerCase().trim();
+    const isAdmin = ADMIN_EMAILS.some((email) => email === userEmail);
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Forbidden: Master Admin Access Only" },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
-    const { userId, email, amount, plan, paymentMethod = "UPI AutoPay", status = "Success" } = body;
+    const { userId, amount, plan, paymentMethod = "UPI AutoPay", status = "Success" } = body;
 
     const supabase = createServerSupabaseClient();
 
