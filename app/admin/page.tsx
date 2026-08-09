@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUser, UserButton, SignIn } from "@clerk/nextjs";
+import { useUser, UserButton, SignInButton, SignUpButton } from "@clerk/nextjs";
 
 /* ============= Admin Interface Types ============= */
 
@@ -34,13 +34,15 @@ interface PaymentLog {
 
 interface WhitelistedAdmin {
   email: string;
-  password?: string;
   status: string;
   token: string;
   isSuper?: boolean;
 }
 
-const DEFAULT_SUPER_ADMINS = ["ashishkushwaha1822@gmail.com"];
+const DEFAULT_SUPER_ADMINS = [
+  "ashishkushwaha1822@gmail.com",
+  "uniqueshopemart.in@gmail.com",
+];
 
 export default function AdminDashboardPage() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -60,9 +62,7 @@ export default function AdminDashboardPage() {
   /* Add New Admin Gmail Form State */
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [autoVerifyNewAdmin, setAutoVerifyNewAdmin] = useState(true);
-  const [generatedVerificationLink, setGeneratedVerificationLink] = useState("");
   const [addingAdmin, setAddingAdmin] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
 
   /* Razorpay Gateway Keys State */
   const [razorpayKeyId, setRazorpayKeyId] = useState("rzp_live_Flowchat2026Key");
@@ -145,7 +145,7 @@ export default function AdminDashboardPage() {
       }
     } catch (err) {
       console.error("Admin data load error:", err);
-    } finally {
+    } fontFinally: {
       setLoading(false);
     }
   };
@@ -155,7 +155,6 @@ export default function AdminDashboardPage() {
     if (!newAdminEmail) return;
 
     setAddingAdmin(true);
-    setGeneratedVerificationLink("");
 
     try {
       const res = await fetch("/api/admin/whitelist", {
@@ -170,15 +169,11 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to add Admin Gmail");
 
-      if (data.verificationLink) {
-        setGeneratedVerificationLink(data.verificationLink);
-      }
-
       if (data.admins) {
         setAdminWhitelist(data.admins);
       }
 
-      alert(`✓ Admin Gmail ${newAdminEmail} added successfully!`);
+      alert(`✓ Admin Gmail ${newAdminEmail} added to Whitelist! They can now sign in.`);
       setNewAdminEmail("");
       loadAdminData();
     } catch (err: any) {
@@ -186,13 +181,6 @@ export default function AdminDashboardPage() {
     } finally {
       setAddingAdmin(false);
     }
-  };
-
-  const handleCopyLink = () => {
-    if (!generatedVerificationLink) return;
-    navigator.clipboard.writeText(generatedVerificationLink);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   const handleRemoveAdminGmail = async (adminEmailToRemove: string) => {
@@ -328,29 +316,44 @@ export default function AdminDashboardPage() {
     );
   }
 
-  /* SCREEN 1: NOT SIGNED IN — EXACT SAME SLEEK CLERK AUTH UI AS SIGN-UP PAGE */
+  /* SCREEN 1: NOT SIGNED IN — BOTH SIGN-IN AND SIGN-UP OPTIONS FOR NEW ADMIN GMAILS */
   if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-6">
-        <div className="mb-6 text-center space-y-1">
-          <span className="text-3xl font-black text-white">
-            Flow<span style={{ color: "#4ade80" }}>chat</span> Admin
-          </span>
-          <p className="text-xs text-gray-400">
-            Sign in with an authorized Admin Gmail to unlock Master Control.
-          </p>
-        </div>
+        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-gray-800 shadow-2xl space-y-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-2xl mx-auto border border-emerald-500/30">
+            👑
+          </div>
 
-        <div className="bg-gray-900 p-2 rounded-3xl border border-gray-800 shadow-2xl">
-          <SignIn
-            routing="hash"
-            appearance={{
-              variables: {
-                colorPrimary: "#03856b",
-                colorBackground: "#0f172a",
-              },
-            }}
-          />
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black text-white">Flowchat Admin Login</h1>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Sign in with your authorized Whitelisted Admin Gmail address.
+            </p>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <SignInButton mode="modal">
+              <button className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-sm shadow-lg transition-colors flex items-center justify-center gap-2">
+                <span>🔒</span> Sign In to Admin Panel
+              </button>
+            </SignInButton>
+
+            <div className="text-xs text-gray-500 py-1">— New Admin Gmail? —</div>
+
+            <SignUpButton mode="modal">
+              <button className="w-full py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold text-xs border border-gray-700 transition-colors">
+                ✨ First Time? Register / Sign Up Gmail
+              </button>
+            </SignUpButton>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-gray-950 border border-gray-800 text-[11px] text-gray-400 space-y-1 text-left">
+            <p className="font-bold text-emerald-400">💡 First Time Login Note:</p>
+            <p>
+              If your Gmail was added to Whitelist, click <strong>&ldquo;Continue with Google&rdquo;</strong> in the Sign In popup OR click <strong>&ldquo;Sign Up&rdquo;</strong> to create your password for the first time.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -373,7 +376,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="p-4 rounded-2xl bg-gray-800/80 border border-gray-700/80 text-xs text-gray-300">
-            Please log out and sign in with an authorized Admin Gmail account.
+            Please log out and sign in with an authorized Whitelisted Admin Gmail account.
           </div>
 
           <div className="flex justify-center pt-2">
