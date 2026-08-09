@@ -567,7 +567,7 @@ export default function AdminDashboardPage() {
                       type="text"
                       value={forgotOtp}
                       onChange={(e) => setForgotOtp(e.target.value)}
-                      placeholder="Enter 6-digit OTP code"
+                      placeholder="Enter 6-digit OTP code from Gmail"
                       required
                       autoComplete="off"
                       className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
@@ -1370,7 +1370,7 @@ export default function AdminDashboardPage() {
                     type="text"
                     value={forgotOtp}
                     onChange={(e) => setForgotOtp(e.target.value)}
-                    placeholder="Enter 6-digit OTP code"
+                    placeholder="Enter 6-digit OTP code from Gmail"
                     required
                     autoComplete="off"
                     className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
