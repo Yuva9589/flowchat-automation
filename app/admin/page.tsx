@@ -32,7 +32,10 @@ interface PaymentLog {
   created_at: string;
 }
 
-const ADMIN_EMAILS = ["ashishkushwaha1822@gmail.com"];
+const ADMIN_EMAILS = [
+  "ashishkushwaha1822@gmail.com",
+  "uniqueshopemart.in@gmail.com",
+];
 
 export default function AdminDashboardPage() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -205,29 +208,25 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-black text-white">Master Admin Access</h1>
+            <h1 className="text-2xl font-black text-white">Master Admin Control</h1>
             <p className="text-xs text-gray-400">
-              Sign in with your Master Admin Gmail address (<code>ashishkushwaha1822@gmail.com</code>) to unlock full control.
+              Sign in with your authorized Master Admin account to unlock full control.
             </p>
           </div>
 
           <div className="pt-2">
             <SignInButton mode="modal">
               <button className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-sm shadow-lg transition-colors">
-                Sign In with Master Gmail →
+                Sign In with Admin Account →
               </button>
             </SignInButton>
           </div>
-
-          <p className="text-[11px] text-gray-500 pt-2 border-t border-gray-800">
-            Forgot Password? Click Sign In above and select &ldquo;Forgot password?&rdquo; to receive an official reset email directly to your Gmail inbox.
-          </p>
         </div>
       </div>
     );
   }
 
-  /* SCREEN 2: SIGNED IN BUT NOT MASTER ADMIN EMAIL */
+  /* SCREEN 2: SIGNED IN BUT NOT MASTER ADMIN (FULLY ANONYMOUS & HIDDEN GMAIL) */
   if (!isMasterAdmin) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
@@ -238,15 +237,13 @@ export default function AdminDashboardPage() {
 
           <div className="space-y-2">
             <h1 className="text-2xl font-black text-white">403 Access Denied</h1>
-            <p className="text-xs text-gray-400">
-              Your logged in email (<code>{currentUserEmail}</code>) is NOT authorized for Master Admin Control.
+            <p className="text-xs text-gray-400 leading-relaxed">
+              You are not authorized to access Master Admin Control.
             </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-gray-800/80 border border-gray-700/80 text-xs text-gray-300">
-            Please log out and sign in with the official Master Admin Gmail address:
-            <br />
-            <strong className="text-emerald-400 font-mono">ashishkushwaha1822@gmail.com</strong>
+            Please log out and sign in with an authorized Master Admin account.
           </div>
 
           <div className="flex justify-center pt-2">

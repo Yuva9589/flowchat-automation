@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase";
 
 const ADMIN_EMAILS = [
   "ashishkushwaha1822@gmail.com",
+  "uniqueshopemart.in@gmail.com",
   process.env.ADMIN_EMAIL?.toLowerCase().trim() || "",
 ].filter(Boolean);
 
@@ -20,8 +21,6 @@ export async function GET(req: NextRequest) {
     }
 
     const userEmail = clerkUser.emailAddresses[0]?.emailAddress?.toLowerCase().trim();
-
-    // Check if user is Master Admin
     const isAdmin = ADMIN_EMAILS.some((email) => email === userEmail);
 
     if (!isAdmin) {
@@ -33,7 +32,6 @@ export async function GET(req: NextRequest) {
 
     const supabase = createServerSupabaseClient();
 
-    // Fetch all users from Supabase DB
     const { data: users, error: usersError } = await supabase
       .from("users")
       .select("*")
@@ -44,7 +42,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: usersError.message }, { status: 500 });
     }
 
-    // Fetch all automations to compute stats
     const { data: automations } = await supabase.from("automations").select("*");
 
     const automationsByUser: Record<string, { count: number; dmsSent: number }> = {};
