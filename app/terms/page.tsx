@@ -3,7 +3,6 @@ import Footer from "@/components/Footer";
 
 /* =========================================================================
    ✏️ EDIT YOUR TERMS OF SERVICE TEXT HERE (NO CODING REQUIRED)
-   Aapko niche sirf double quotes "..." ke andar apna simple text badalna hai.
    ========================================================================= */
 
 const termsData = {
@@ -11,6 +10,8 @@ const termsData = {
   lastUpdated: "August 2026",
   domain: "earnwithads.in",
   companyName: "Flowchat Inc.",
+  contactEmail: "ashishkushwaha1822@gmail.com",
+  contactPhone: "+91 9589001822",
 
   sections: [
     {
@@ -31,7 +32,7 @@ const termsData = {
     },
     {
       heading: "5. Account Security & User Responsibilities",
-      text: "You are responsible for maintaining the confidentiality of your Clerk login credentials and for all automation activities executed through your connected Instagram, Facebook, or WhatsApp accounts. You must notify us immediately at support@earnwithads.in of any unauthorized access.",
+      text: "You are responsible for maintaining the confidentiality of your Clerk login credentials and for all automation activities executed through your connected Instagram, Facebook, or WhatsApp accounts. You must notify us immediately at ashishkushwaha1822@gmail.com or +91 9589001822 of any unauthorized access.",
     },
     {
       heading: "6. Intellectual Property & Brand Rights",
@@ -43,7 +44,7 @@ const termsData = {
     },
     {
       heading: "8. Contact & Legal Support",
-      text: "For questions, billing inquiries, or legal notices regarding these Terms, please contact our Legal Team at support@earnwithads.in or legal@earnwithads.in.",
+      text: "For questions, billing inquiries, or legal notices regarding these Terms, please contact our Legal & Support Team:\n\nEmail: ashishkushwaha1822@gmail.com\nPhone / Mobile: +91 9589001822",
     },
   ],
 };
@@ -81,7 +82,7 @@ export default function TermsPage() {
                 <h2 className="text-xl font-bold text-gray-900 tracking-tight">
                   {sec.heading}
                 </h2>
-                <p className="text-gray-600 leading-relaxed">{sec.text}</p>
+                <p className="text-gray-600 leading-relaxed whitespace-pre-line">{sec.text}</p>
               </section>
             ))}
           </div>

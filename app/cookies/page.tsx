@@ -3,12 +3,13 @@ import Footer from "@/components/Footer";
 
 /* =========================================================================
    ✏️ EDIT YOUR COOKIE POLICY TEXT HERE (NO CODING REQUIRED)
-   Aapko niche sirf double quotes "..." ke andar apna simple text badalna hai.
    ========================================================================= */
 
 const cookieData = {
   title: "Cookie Policy",
   domainNote: "Meta Platforms Compliance | Domain: earnwithads.in",
+  contactEmail: "ashishkushwaha1822@gmail.com",
+  contactPhone: "+91 9589001822",
 
   sections: [
     {
@@ -33,8 +34,8 @@ const cookieData = {
       ],
     },
     {
-      title: "3. Managing Your Cookies",
-      text: "You can manage or disable cookies at any time through your web browser settings. Please note that disabling essential cookies may prevent you from logging into your Flowchat dashboard.",
+      title: "3. Managing Your Cookies & Support",
+      text: "You can manage or disable cookies at any time through your web browser settings. For questions regarding our cookie policy, contact us:\n\nEmail: ashishkushwaha1822@gmail.com\nPhone / Mobile: +91 9589001822",
     },
   ],
 };
@@ -66,7 +67,7 @@ export default function CookiePolicyPage() {
             {cookieData.sections.map((sec, idx) => (
               <section key={idx} className="space-y-2">
                 <h2 className="text-lg font-bold text-gray-900">{sec.title}</h2>
-                {sec.text && <p>{sec.text}</p>}
+                {sec.text && <p className="whitespace-pre-line">{sec.text}</p>}
                 {sec.cookiesList && (
                   <ul className="space-y-3">
                     {sec.cookiesList.map((c, i) => (

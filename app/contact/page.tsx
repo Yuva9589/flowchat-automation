@@ -6,22 +6,25 @@ import Footer from "@/components/Footer";
 
 /* =========================================================================
    ✏️ EDIT YOUR CONTACT PAGE TEXT HERE (NO CODING REQUIRED)
-   Aapko niche sirf double quotes "..." ke andar apna simple text badalna hai.
    ========================================================================= */
 
 const contactData = {
   badge: "Get In Touch",
   title: "We're Here to Help",
   subtitle:
-    "Have a question about Flowchat, Meta API setup, or billing? Drop us a message below or email us directly.",
+    "Have a question about Flowchat, Meta API setup, or billing? Drop us a message below or contact us directly.",
 
-  emailTitle: "📧 Email Support",
+  emailTitle: "📧 Official Email Support",
   emailDesc: "For general inquiries, setup help, or billing:",
-  emailAddress: "support@earnwithads.in",
+  emailAddress: "ashishkushwaha1822@gmail.com",
+
+  phoneTitle: "📞 Phone / Mobile Support",
+  phoneDesc: "Official Phone Number:",
+  phoneNumber: "+91 9589001822",
 
   hoursTitle: "⏱️ Support Hours & SLA",
   hoursDesc:
-    "Our team responds to all support tickets within 24 hours (Monday to Saturday, 9 AM – 7 PM IST).",
+    "Our team responds to all support inquiries within 24 hours (Monday to Saturday, 9 AM – 7 PM IST).",
 
   domainTitle: "🏢 Official Domain & Platform",
   domainDesc: "Flowchat Platform | Official Domain: earnwithads.in",
@@ -74,9 +77,20 @@ export default function ContactPage() {
             <p className="text-xs text-gray-600">{contactData.emailDesc}</p>
             <a
               href={`mailto:${contactData.emailAddress}`}
-              className="text-sm font-bold text-[#03856b] hover:underline block"
+              className="text-sm font-bold text-[#03856b] hover:underline block font-mono"
             >
               {contactData.emailAddress}
+            </a>
+          </div>
+
+          <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100 space-y-2">
+            <h3 className="font-bold text-gray-900 text-sm">{contactData.phoneTitle}</h3>
+            <p className="text-xs text-gray-600">{contactData.phoneDesc}</p>
+            <a
+              href={`tel:${contactData.phoneNumber}`}
+              className="text-sm font-bold text-[#03856b] hover:underline block font-mono"
+            >
+              {contactData.phoneNumber}
             </a>
           </div>
 

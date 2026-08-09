@@ -3,7 +3,6 @@ import Footer from "@/components/Footer";
 
 /* =========================================================================
    ✏️ EDIT YOUR DATA DELETION INSTRUCTIONS TEXT HERE (NO CODING REQUIRED)
-   Aapko niche sirf double quotes "..." ke andar apna simple text badalna hai.
    ========================================================================= */
 
 const dataDeletionData = {
@@ -30,9 +29,9 @@ const dataDeletionData = {
     },
     {
       step: "Method 3",
-      title: "Direct Email Erasure Request (24-Hour SLA)",
+      title: "Direct Email / Phone Request (24-Hour SLA)",
       description:
-        "Send an email to support@earnwithads.in or privacy@earnwithads.in with the subject line 'DATA DELETION REQUEST'. Include your registered email address. Our Data Protection Team will manually purge all account records and send you an official Data Deletion Confirmation Certificate within 24-48 business hours.",
+        "Contact us directly via Email at ashishkushwaha1822@gmail.com or Mobile at +91 9589001822 with the subject line 'DATA DELETION REQUEST'. Include your registered email address. Our Data Protection Team will manually purge all account records and send you an official Data Deletion Confirmation Certificate within 24-48 business hours.",
     },
   ],
 

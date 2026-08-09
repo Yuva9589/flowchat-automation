@@ -3,7 +3,6 @@ import Footer from "@/components/Footer";
 
 /* =========================================================================
    ✏️ EDIT YOUR PRIVACY POLICY TEXT HERE (NO CODING REQUIRED)
-   Aapko niche sirf double quotes "..." ke andar apna simple text badalna hai.
    ========================================================================= */
 
 const privacyData = {
@@ -11,8 +10,8 @@ const privacyData = {
   lastUpdated: "August 2026",
   companyName: "Flowchat Inc. (earnwithads.in)",
   domain: "earnwithads.in",
-  contactEmail: "support@earnwithads.in",
-  dpoEmail: "privacy@earnwithads.in",
+  contactEmail: "ashishkushwaha1822@gmail.com",
+  contactPhone: "+91 9589001822",
 
   sections: [
     {
@@ -27,7 +26,7 @@ const privacyData = {
       content:
         "In order to execute automated comment-to-DM flows, story replies, and keyword triggers across Instagram, Facebook, and WhatsApp, we collect and process the following categories of data:",
       bullets: [
-        "A. Account & Profile Data: Your name, email address, profile avatar, and authentication credentials managed securely via Clerk Authentication.",
+        "A. Account & Profile Data: Your name, email address, and profile details processed securely via Clerk Authentication.",
         "B. Meta Platform Access Tokens: OAuth access tokens, Page Access Tokens, and Instagram Business Account Identifiers issued by Meta. We NEVER request, access, or store your Instagram or Facebook account passwords.",
         "C. Comment & Interaction Data: Public comments, story replies, post URLs, reel captions, and keyword trigger words ('LINK', 'PRICE', 'INFO') dropped on your connected Meta accounts.",
         "D. Direct Message Content: Automation reply templates, custom links, coupon codes, and automated DM delivery timestamps.",
@@ -86,19 +85,19 @@ const privacyData = {
         "You have full control over your data. You may exercise any of the following rights at any time:",
       bullets: [
         "Right to Access: Request a copy of all personal data held about your account.",
-        "Right to Erasure / Data Deletion: Request complete erasure of your account and Meta tokens via earnwithads.in/data-deletion or by emailing support@earnwithads.in.",
+        "Right to Erasure / Data Deletion: Request complete erasure of your account and Meta tokens via earnwithads.in/data-deletion or by emailing ashishkushwaha1822@gmail.com.",
         "Right to Revoke Permissions: Revoke Flowchat's permissions directly from your Facebook/Instagram Business settings under 'Apps and Websites'. Once revoked, our system automatically revokes and purges your connection tokens.",
       ],
     },
     {
-      heading: "8. Contact Information & Data Protection Officer (DPO)",
+      heading: "8. Contact Information & Privacy Team",
       content:
-        "If you have any questions, privacy concerns, or data deletion requests regarding this Privacy Policy, please contact our Data Protection Team:",
+        "If you have any questions, privacy concerns, or data deletion requests regarding this Privacy Policy, please contact our Support & Privacy Team:",
       contactDetails: [
         "Domain: earnwithads.in (Flowchat Platform)",
-        "Support Email: support@earnwithads.in",
-        "Privacy & DPO Email: privacy@earnwithads.in",
-        "SLA Response Time: Within 24-48 business hours",
+        "Official Email: ashishkushwaha1822@gmail.com",
+        "Official Phone / Mobile: +91 9589001822",
+        "SLA Response Time: Within 24 business hours",
       ],
     },
   ],

@@ -3,12 +3,13 @@ import Footer from "@/components/Footer";
 
 /* =========================================================================
    ✏️ EDIT YOUR SECURITY POLICY TEXT HERE (NO CODING REQUIRED)
-   Aapko niche sirf double quotes "..." ke andar apna simple text badalna hai.
    ========================================================================= */
 
 const securityData = {
   title: "Data Security & Encryption",
   subtitle: "Infrastructure & API Protection | Domain: earnwithads.in",
+  contactEmail: "ashishkushwaha1822@gmail.com",
+  contactPhone: "+91 9589001822",
 
   sections: [
     {
@@ -20,8 +21,8 @@ const securityData = {
       text: "All data transmitted between your browser, our servers, and Meta APIs is encrypted using 256-bit SSL/TLS protocols (HTTPS). Sensitive API access tokens are stored in Supabase with Row Level Security (RLS) and AES-256 encryption.",
     },
     {
-      title: "3. Continuous Monitoring & Incident Response",
-      text: "Our infrastructure is hosted on Vercel and Supabase with 99.9% uptime SLA and 24/7 automated threat monitoring. In case of any security vulnerability report, contact security@earnwithads.in.",
+      title: "3. Continuous Monitoring & Security Contact",
+      text: "Our infrastructure is hosted on Vercel and Supabase with 99.9% uptime SLA and 24/7 automated threat monitoring. In case of any security vulnerability report, contact:\n\nEmail: ashishkushwaha1822@gmail.com\nPhone / Mobile: +91 9589001822",
     },
   ],
 };
@@ -53,7 +54,7 @@ export default function SecurityPage() {
             {securityData.sections.map((sec, idx) => (
               <section key={idx} className="space-y-2">
                 <h2 className="text-lg font-bold text-gray-900">{sec.title}</h2>
-                <p>{sec.text}</p>
+                <p className="whitespace-pre-line">{sec.text}</p>
               </section>
             ))}
           </div>
