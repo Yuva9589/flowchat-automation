@@ -213,6 +213,26 @@ export default function DashboardSidebar() {
                 </Link>
               );
             })}
+
+            {/* Section 3: Billing & Account */}
+            <p className="text-[10px] font-semibold text-gray-400 tracking-widest uppercase px-3 mb-2 mt-6">
+              Billing & Account
+            </p>
+
+            <Link
+              href="/dashboard/billing"
+              onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                pathname === "/dashboard/billing"
+                  ? "bg-[#03856b] text-white shadow-sm"
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <span className={pathname === "/dashboard/billing" ? "text-white" : "text-gray-500"}>
+                <BillingIcon />
+              </span>
+              Payment Information
+            </Link>
           </nav>
 
           {/* Upgrade Card */}
@@ -236,9 +256,12 @@ export default function DashboardSidebar() {
                 <p className="text-white/90 text-xs mb-3">
                   Unlock unlimited automations & premium features.
                 </p>
-                <button className="w-full text-center bg-white text-[#03856b] text-xs font-semibold py-2 rounded-lg hover:bg-gray-50 transition-colors">
-                  Upgrade — ₹99/mo
-                </button>
+                <Link
+                  href="/dashboard/billing"
+                  className="block w-full text-center bg-white text-[#03856b] text-xs font-semibold py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Manage Subscription →
+                </Link>
               </div>
             </div>
           </div>
