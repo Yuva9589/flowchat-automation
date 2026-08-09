@@ -8,34 +8,37 @@ import Footer from "@/components/Footer";
 
 const dataDeletionData = {
   title: "Data Deletion Instructions",
-  complianceNote: "Compliance Policy for Meta Platforms | Domain: earnwithads.in",
+  subtitle: "Compliance Document for Meta Platforms & User Rights | Domain: earnwithads.in",
 
-  introHeading: "Your Right to Data Deletion",
+  introHeading: "Your Right to Complete Data Erasure",
   introText:
-    "In accordance with Meta Platform policies and data privacy regulations, you have the right to request the deletion of any data associated with your Flowchat account at any time.",
+    "In full compliance with Meta Platform Terms, Meta Developer Policy (Section 3.a Data Protection), GDPR, and CCPA regulations, Flowchat provides all users with the absolute right to request the complete deletion of their account data, Meta Page tokens, Instagram credentials, and automation history at any time.",
 
-  methodsHeading: "How to Remove Your Data & Revoke Access:",
+  methodsHeading: "3 Easy Methods to Delete Your Data & Revoke Access:",
   methods: [
     {
-      title: "Method 1: From your Flowchat Dashboard",
+      step: "Method 1",
+      title: "Self-Service Deletion via Flowchat Dashboard (Instant)",
       description:
-        "Log in to your dashboard at earnwithads.in/dashboard, go to settings for Instagram, Facebook, or WhatsApp, and click 'Disconnect & Delete All Automations'. This instantly and permanently deletes all your keywords, automations, and tokens from our Supabase database.",
+        "1. Log into your dashboard at earnwithads.in/dashboard.\n2. Navigate to Settings for Instagram, Facebook, or WhatsApp.\n3. Click 'Disconnect Account & Purge All Automations'.\n4. Your connected Page tokens, keyword rules, and DM logs are permanently erased from our Supabase database within 5 seconds.",
     },
     {
-      title: "Method 2: From Facebook / Instagram Settings",
+      step: "Method 2",
+      title: "Revoke Access via Meta Settings (Facebook / Instagram)",
       description:
-        "You can remove Flowchat's permissions directly from your Facebook or Instagram account settings under Apps and Websites. Once removed, our system automatically revokes and purges your connection tokens.",
+        "1. Log into your Facebook or Instagram account.\n2. Go to Settings & Privacy → Settings → Apps and Websites.\n3. Locate 'Flowchat' and click 'Remove'.\n4. Upon receiving Meta's Deletion Webhook Callback, our system automatically revokes, purges, and deletes all associated access tokens within 24 hours.",
     },
     {
-      title: "Method 3: By Email Request",
+      step: "Method 3",
+      title: "Direct Email Erasure Request (24-Hour SLA)",
       description:
-        "Send an email to support@earnwithads.in with your registered email address and account username requesting complete data erasure. We process all data deletion requests within 48 hours.",
+        "Send an email to support@earnwithads.in or privacy@earnwithads.in with the subject line 'DATA DELETION REQUEST'. Include your registered email address. Our Data Protection Team will manually purge all account records and send you an official Data Deletion Confirmation Certificate within 24-48 business hours.",
     },
   ],
 
-  retentionHeading: "Data Retention Policy",
+  retentionHeading: "Data Retention & Automatic Purge Schedule",
   retentionText:
-    "Upon receiving a deletion request, all personal data, access tokens, and automation history are completely purged from our active databases and secure backups within 48 hours.",
+    "Once a deletion request is executed or an account is deleted, all stored access tokens, DM templates, and lead analytics are permanently purged from both our active database servers and secure backups within 48 hours. No residual user data is retained.",
 };
 
 /* =========================================================================
@@ -47,62 +50,77 @@ export default function DataDeletionPage() {
     <main className="min-h-screen bg-white">
       <Navbar />
 
-      <div className="pt-36 pb-16 px-6">
-        <div className="max-w-3xl mx-auto bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100 space-y-8">
-          <div>
+      <div className="pt-36 pb-20 px-6">
+        <div className="max-w-4xl mx-auto bg-white rounded-3xl p-8 md:p-14 shadow-sm border border-gray-100 space-y-10">
+          {/* Header */}
+          <div className="border-b border-gray-100 pb-6">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-2xl font-black text-gray-900">
                 Flow<span style={{ color: "#03856b" }}>chat</span>
               </span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight">
+            <h1 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight">
               {dataDeletionData.title}
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              {dataDeletionData.complianceNote}
+            <p className="text-xs text-gray-500 mt-2 font-medium">
+              {dataDeletionData.subtitle}
             </p>
           </div>
 
-          <div className="space-y-6 text-sm text-gray-700 leading-relaxed">
-            <section className="space-y-2">
-              <h2 className="text-lg font-bold text-gray-900">
+          <div className="space-y-8 text-sm text-gray-700 leading-relaxed">
+            <section className="space-y-3">
+              <h2 className="text-xl font-bold text-gray-900 tracking-tight">
                 {dataDeletionData.introHeading}
               </h2>
-              <p>{dataDeletionData.introText}</p>
+              <p className="text-gray-600 leading-relaxed">
+                {dataDeletionData.introText}
+              </p>
             </section>
 
-            <section className="space-y-3">
-              <h2 className="text-lg font-bold text-gray-900">
+            <section className="space-y-4">
+              <h2 className="text-xl font-bold text-gray-900 tracking-tight">
                 {dataDeletionData.methodsHeading}
               </h2>
 
-              {dataDeletionData.methods.map((m, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-1"
-                >
-                  <h3 className="font-bold text-gray-900 text-sm">{m.title}</h3>
-                  <p className="text-xs text-gray-600">{m.description}</p>
-                </div>
-              ))}
+              <div className="space-y-4">
+                {dataDeletionData.methods.map((m, idx) => (
+                  <div
+                    key={idx}
+                    className="p-6 rounded-2xl bg-gray-50 border border-gray-100 space-y-2"
+                  >
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-[#03856b] text-[10px] font-bold uppercase tracking-wider">
+                      {m.step}
+                    </span>
+                    <h3 className="font-bold text-gray-900 text-base">
+                      {m.title}
+                    </h3>
+                    <p className="text-xs text-gray-600 whitespace-pre-line leading-relaxed">
+                      {m.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </section>
 
-            <section className="space-y-2">
-              <h2 className="text-lg font-bold text-gray-900">
+            <section className="space-y-3">
+              <h2 className="text-xl font-bold text-gray-900 tracking-tight">
                 {dataDeletionData.retentionHeading}
               </h2>
-              <p>{dataDeletionData.retentionText}</p>
+              <p className="text-gray-600 leading-relaxed">
+                {dataDeletionData.retentionText}
+              </p>
             </section>
           </div>
 
-          <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
+          {/* Footer Link */}
+          <div className="pt-8 border-t border-gray-100 flex items-center justify-between">
             <a
               href="/"
               className="text-xs font-semibold text-[#03856b] hover:underline"
             >
-              ← Back to Home
+              ← Back to Flowchat Home
             </a>
-            <span className="text-xs text-gray-400">© 2026 Flowchat</span>
+            <span className="text-xs text-gray-400">© 2026 Flowchat. All rights reserved.</span>
           </div>
         </div>
       </div>
