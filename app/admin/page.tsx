@@ -878,7 +878,7 @@ export default function AdminDashboardPage() {
               </form>
             </div>
 
-            {/* Whitelisted Admin Managers List Table with REMOVE ADMIN BUTTON */}
+            {/* Whitelisted Admin Managers List Table with REMOVE BUTTON FOR ALL ADMINS EXCEPT MAIN SUPER ADMIN */}
             <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
               <div className="p-4 bg-gray-800/80 border-b border-gray-800">
                 <h3 className="font-bold text-white text-xs uppercase tracking-wider">
@@ -899,7 +899,9 @@ export default function AdminDashboardPage() {
                           {adm.email}
                         </p>
                         <p className="text-[10px] text-emerald-400 font-mono">
-                          {adm.isSuper ? "Super Admin" : "Whitelisted Admin"}
+                          {adm.email.toLowerCase() === "ashishkushwaha1822@gmail.com"
+                            ? "Master Owner Admin"
+                            : "Whitelisted Admin Manager"}
                         </p>
                       </div>
                     </div>
@@ -915,7 +917,7 @@ export default function AdminDashboardPage() {
                         </span>
                       )}
 
-                      {!adm.isSuper && (
+                      {adm.email.toLowerCase() !== "ashishkushwaha1822@gmail.com" && (
                         <button
                           onClick={() => handleRemoveAdminGmail(adm.email)}
                           className="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-[11px] border border-red-500/30 transition-colors"
