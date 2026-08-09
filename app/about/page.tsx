@@ -8,60 +8,114 @@ import Footer from "@/components/Footer";
 
 const aboutData = {
   // Hero Badge & Title
-  badge: "The Flowchat Manifesto",
-  title: "Why We Built Flowchat",
+  badge: "About Flowchat",
+  title: "Automating Social DM Conversations",
   subtitle:
-    "At Flowchat, we help creators, coaches, and businesses grow by simplifying social DM automation — turning every comment into a customer.",
+    "Automating social DM conversations so creators can focus on their content and business growth.",
 
-  // Story Paragraphs (Manychat style)
-  sections: [
+  // Official Company & Founder Details
+  companyName: "Flowchat",
+  founderName: "Ashish Kushwaha",
+  foundedYear: "2026",
+  location:
+    "Word No.10 Basti Road Devendra Nagar, District Panna, Madhya Pradesh, India",
+  domain: "earnwithads.in",
+  contactEmail: "ashishkushwaha1822@gmail.com",
+  contactPhone: "+91 9589001822",
+
+  // Mission Statement / Tagline
+  missionTitle: "Our Mission",
+  missionStatement:
+    "Automating social DM conversations so creators can focus on their content and business growth.",
+
+  // Target Audience / Who We Serve
+  audienceTitle: "Who We Serve",
+  audienceSubtitle:
+    "Flowchat is purpose-built for high-growth digital creators, brands, and service businesses in India.",
+  audiences: [
     {
-      heading: "Every Creator Has a Unique Story to Tell",
-      text: "Whether you are selling a course, coaching students, offering a service, or running an online brand — your content is your passion.",
+      title: "Indian Creators",
+      description:
+        "Monetize your Instagram Reels & Facebook posts instantly by turning viral comments into direct sales links.",
+      icon: "🎨",
     },
     {
-      heading: "Business Owners & Creators Know Their Craft",
-      text: "But you shouldn't have to spend 6 hours every day manually replying 'DM sent' or sending link after link in Instagram and Facebook comments.",
+      title: "Coaches & Educators",
+      description:
+        "Automatically send course details, webinar signups, and downloadable PDFs directly into student DMs.",
+      icon: "🎓",
     },
     {
-      heading: "Speed & Automation Matter",
-      text: "When someone drops a comment like 'LINK' or 'PRICE' on your Reel or Story, they want it instantly. If they wait 2 hours, they forget. Flowchat delivers your DMs in under 4 seconds — 24/7, even while you sleep.",
+      title: "Instagram Sellers",
+      description:
+        "Instantly reply to comment queries like 'Price?' or 'Details?' with catalog links and checkout options.",
+      icon: "🛍️",
     },
     {
-      heading: "100% Safe & Official Meta APIs",
-      text: "We built Flowchat directly on official Meta and WhatsApp Business APIs. No password sharing, no risky grey-area bots — 100% account safety guaranteed.",
+      title: "Small Business Owners",
+      description:
+        "Capture customer leads 24/7 without spending extra hours on manual response management.",
+      icon: "🏢",
+    },
+    {
+      title: "Fitness Trainers",
+      description: "Send fitness plans, trial passes, and booking links automatically when followers comment.",
+      icon: "💪",
+    },
+    {
+      title: "E-commerce Stores",
+      description:
+        "Deliver personalized promo codes, product recommendations, and cart recovery DMs effortlessly.",
+      icon: "🛒",
     },
   ],
 
-  // Flowchat by the Numbers (Manychat style)
+  // Story & Pillars (Manychat Style)
+  storyTitle: "Why We Built Flowchat",
+  storySections: [
+    {
+      heading: "Creators Should Focus on Content, Not Copy-Pasting Links",
+      text: "As a creator or business owner, your talent is creating valuable content and products. Spending hours every day replying 'DM sent' or copying links manually steals time from growing your business.",
+    },
+    {
+      heading: "Instant Gratification Boosts Conversion",
+      text: "When a customer asks for a link in the comments, waiting even 10 minutes leads to drop-offs. Flowchat delivers your response in under 4 seconds — capturing purchase intent at its absolute peak.",
+    },
+    {
+      heading: "100% Meta Compliant & Account Safe",
+      text: "Flowchat connects via official Meta Graph APIs and WhatsApp Business APIs. No risky password sharing, no grey-hat bots, and total security for your brand's account.",
+    },
+  ],
+
+  // Stats Section (Manychat Style)
   statsTitle: "Flowchat by the Numbers",
   stats: [
     {
-      number: "10,000+",
-      title: "Creators & Businesses",
-      description: "Over 10,000 creators chose Flowchat to grow their sales.",
-    },
-    {
-      number: "1M+",
-      title: "DMs Delivered",
-      description: "Over one million automated conversations delivered seamlessly.",
+      number: "2026",
+      title: "Founded Year",
+      description: "Launched to revolutionize social DM marketing in India.",
     },
     {
       number: "<4s",
       title: "Delivery Speed",
-      description: "Avg response delivery time across Instagram, Facebook & WhatsApp.",
+      description: "Average response speed across Instagram, Facebook & WhatsApp.",
     },
     {
-      number: "#1",
-      title: "DM Automation Engine",
-      description: "Built for creators, coaches, e-commerce, and agencies in India.",
+      number: "10,000+",
+      title: "Targeted Growth",
+      description: "Helping creators & sellers automate millions of customer touchpoints.",
+    },
+    {
+      number: "100%",
+      title: "Official Meta APIs",
+      description: "Fully compliant with Meta & WhatsApp policies.",
     },
   ],
 
   // Bottom CTA
-  ctaTitle: "Try Flowchat for Free Today",
+  ctaTitle: "Ready to Automate Your Social DMs?",
   ctaSubtitle:
-    "Transform your social comments into sales, leads, and new followers in under 2 minutes.",
+    "Join creators, coaches, and brands across India scaling their social sales on autopilot.",
   ctaButtonText: "Start 7-Day Free Trial",
   ctaButtonUrl: "/#signup",
 };
@@ -76,7 +130,7 @@ export default function AboutPage() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="pt-36 pb-20 px-6 bg-gradient-to-b from-emerald-50/60 via-white to-white text-center">
+      <section className="pt-36 pb-16 px-6 bg-gradient-to-b from-emerald-50/70 via-white to-white text-center">
         <div className="max-w-4xl mx-auto space-y-6">
           <span className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 text-[#03856b]">
             {aboutData.badge}
@@ -84,25 +138,142 @@ export default function AboutPage() {
           <h1 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tight leading-tight">
             {aboutData.title}
           </h1>
-          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            {aboutData.subtitle}
+          <p className="text-lg md:text-2xl text-emerald-900 font-semibold max-w-3xl mx-auto leading-relaxed bg-emerald-50/80 p-6 rounded-2xl border border-emerald-100">
+            &ldquo;{aboutData.subtitle}&rdquo;
           </p>
         </div>
       </section>
 
-      {/* Story / Manifesto Sections (Manychat style) */}
-      <section className="py-12 px-6 max-w-3xl mx-auto space-y-12">
-        {aboutData.sections.map((sec, idx) => (
-          <div
-            key={idx}
-            className="p-8 rounded-3xl bg-white border border-gray-100 shadow-sm space-y-3 hover:border-emerald-200 transition-colors"
-          >
-            <h2 className="text-2xl font-black text-gray-900 leading-snug">
-              {sec.heading}
-            </h2>
-            <p className="text-base text-gray-600 leading-relaxed">{sec.text}</p>
+      {/* Official Company & Founder Info Card */}
+      <section className="py-8 px-6 max-w-5xl mx-auto">
+        <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 md:p-12 text-white shadow-xl space-y-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-700 pb-6 gap-4">
+            <div>
+              <span className="text-emerald-400 font-bold text-xs uppercase tracking-widest">
+                Official Company Overview
+              </span>
+              <h2 className="text-3xl font-black text-white mt-1">
+                {aboutData.companyName}
+              </h2>
+            </div>
+            <span className="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 font-bold text-sm border border-emerald-500/30">
+              Founded in {aboutData.foundedYear}
+            </span>
           </div>
-        ))}
+
+          <div className="grid md:grid-cols-2 gap-8 text-sm">
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-lg shrink-0">
+                  👤
+                </div>
+                <div>
+                  <p className="text-gray-400 text-xs font-medium">Founder & Owner</p>
+                  <p className="text-lg font-bold text-white">{aboutData.founderName}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-lg shrink-0">
+                  📍
+                </div>
+                <div>
+                  <p className="text-gray-400 text-xs font-medium">Operating Location</p>
+                  <p className="text-sm font-semibold text-gray-200 leading-snug">
+                    {aboutData.location}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-lg shrink-0">
+                  ✉️
+                </div>
+                <div>
+                  <p className="text-gray-400 text-xs font-medium">Official Contact Email</p>
+                  <a
+                    href={`mailto:${aboutData.contactEmail}`}
+                    className="text-base font-bold text-emerald-400 hover:underline"
+                  >
+                    {aboutData.contactEmail}
+                  </a>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-lg shrink-0">
+                  📞
+                </div>
+                <div>
+                  <p className="text-gray-400 text-xs font-medium">Customer Support Phone</p>
+                  <a
+                    href={`tel:${aboutData.contactPhone.replace(/\s+/g, "")}`}
+                    className="text-base font-bold text-emerald-400 hover:underline"
+                  >
+                    {aboutData.contactPhone}
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Target Audience / Who We Serve */}
+      <section className="py-16 px-6 max-w-6xl mx-auto space-y-10">
+        <div className="text-center space-y-3 max-w-2xl mx-auto">
+          <span className="px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 text-[#03856b]">
+            Target Audience
+          </span>
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight">
+            {aboutData.audienceTitle}
+          </h2>
+          <p className="text-gray-600 text-base">{aboutData.audienceSubtitle}</p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {aboutData.audiences.map((aud, i) => (
+            <div
+              key={i}
+              className="p-6 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all space-y-3"
+            >
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-2xl flex items-center justify-center">
+                {aud.icon}
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">{aud.title}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {aud.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Story / Manifesto Sections (Manychat style) */}
+      <section className="py-12 px-6 max-w-4xl mx-auto space-y-8">
+        <div className="text-center space-y-3">
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight">
+            {aboutData.storyTitle}
+          </h2>
+        </div>
+
+        <div className="space-y-6">
+          {aboutData.storySections.map((sec, idx) => (
+            <div
+              key={idx}
+              className="p-8 rounded-3xl bg-white border border-gray-100 shadow-sm space-y-3 hover:border-emerald-200 transition-colors"
+            >
+              <h3 className="text-2xl font-bold text-gray-900 leading-snug">
+                {sec.heading}
+              </h3>
+              <p className="text-base text-gray-600 leading-relaxed">
+                {sec.text}
+              </p>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* Stats Section (Manychat style) */}
@@ -112,11 +283,11 @@ export default function AboutPage() {
             {aboutData.statsTitle}
           </h2>
 
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6">
             {aboutData.stats.map((st, i) => (
               <div
                 key={i}
-                className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 space-y-2"
+                className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 space-y-2 text-center md:text-left"
               >
                 <p className="text-3xl md:text-4xl font-black text-[#4ade80]">
                   {st.number}
