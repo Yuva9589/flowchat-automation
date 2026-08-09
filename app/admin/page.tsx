@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUser, UserButton, SignInButton, SignUpButton } from "@clerk/nextjs";
+import { useUser, UserButton, SignIn } from "@clerk/nextjs";
 
 /* ============= Admin Interface Types ============= */
 
@@ -34,6 +34,7 @@ interface PaymentLog {
 
 interface WhitelistedAdmin {
   email: string;
+  password?: string;
   status: string;
   token: string;
   isSuper?: boolean;
@@ -59,10 +60,12 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  /* Add New Admin Gmail Form State */
+  /* Add New Admin Gmail + Password State */
   const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminPassword, setNewAdminPassword] = useState("AdminPass2026!");
   const [autoVerifyNewAdmin, setAutoVerifyNewAdmin] = useState(true);
   const [addingAdmin, setAddingAdmin] = useState(false);
+  const [createdAdminNotice, setCreatedAdminNotice] = useState("");
 
   /* Razorpay Gateway Keys State */
   const [razorpayKeyId, setRazorpayKeyId] = useState("rzp_live_Flowchat2026Key");
@@ -145,16 +148,17 @@ export default function AdminDashboardPage() {
       }
     } catch (err) {
       console.error("Admin data load error:", err);
-    } fontFinally: {
+    } finally {
       setLoading(false);
     }
   };
 
   const handleAddAdminAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAdminEmail) return;
+    if (!newAdminEmail || !newAdminPassword) return;
 
     setAddingAdmin(true);
+    setCreatedAdminNotice("");
 
     try {
       const res = await fetch("/api/admin/whitelist", {
@@ -162,22 +166,26 @@ export default function AdminDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: newAdminEmail,
+          password: newAdminPassword,
           autoVerify: autoVerifyNewAdmin,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to add Admin Gmail");
+      if (!res.ok) throw new Error(data.error || "Failed to create Admin Account");
 
       if (data.admins) {
         setAdminWhitelist(data.admins);
       }
 
-      alert(`✓ Admin Gmail ${newAdminEmail} added to Whitelist! They can now sign in.`);
+      setCreatedAdminNotice(
+        `✓ Admin Account Created & Verified for ${newAdminEmail}! They can now log in using Password: ${newAdminPassword}`
+      );
       setNewAdminEmail("");
+      setNewAdminPassword("AdminPass2026!");
       loadAdminData();
     } catch (err: any) {
-      alert(err.message || "Error adding admin Gmail");
+      alert(err.message || "Error creating admin account");
     } finally {
       setAddingAdmin(false);
     }
@@ -316,44 +324,29 @@ export default function AdminDashboardPage() {
     );
   }
 
-  /* SCREEN 1: NOT SIGNED IN — BOTH SIGN-IN AND SIGN-UP OPTIONS FOR NEW ADMIN GMAILS */
+  /* SCREEN 1: NOT SIGNED IN — OFFICIAL CLERK SIGN-IN CARD WITH BOTH SIGN-IN AND SIGN-UP */
   if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-6">
-        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-gray-800 shadow-2xl space-y-6 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-2xl mx-auto border border-emerald-500/30">
-            👑
-          </div>
+        <div className="mb-6 text-center space-y-1">
+          <span className="text-3xl font-black text-white">
+            Flow<span style={{ color: "#4ade80" }}>chat</span> Admin
+          </span>
+          <p className="text-xs text-gray-400">
+            Sign in with an authorized Admin Gmail to unlock Master Control.
+          </p>
+        </div>
 
-          <div className="space-y-2">
-            <h1 className="text-2xl font-black text-white">Flowchat Admin Login</h1>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Sign in with your authorized Whitelisted Admin Gmail address.
-            </p>
-          </div>
-
-          <div className="space-y-3 pt-2">
-            <SignInButton mode="modal">
-              <button className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-sm shadow-lg transition-colors flex items-center justify-center gap-2">
-                <span>🔒</span> Sign In to Admin Panel
-              </button>
-            </SignInButton>
-
-            <div className="text-xs text-gray-500 py-1">— New Admin Gmail? —</div>
-
-            <SignUpButton mode="modal">
-              <button className="w-full py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold text-xs border border-gray-700 transition-colors">
-                ✨ First Time? Register / Sign Up Gmail
-              </button>
-            </SignUpButton>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-gray-950 border border-gray-800 text-[11px] text-gray-400 space-y-1 text-left">
-            <p className="font-bold text-emerald-400">💡 First Time Login Note:</p>
-            <p>
-              If your Gmail was added to Whitelist, click <strong>&ldquo;Continue with Google&rdquo;</strong> in the Sign In popup OR click <strong>&ldquo;Sign Up&rdquo;</strong> to create your password for the first time.
-            </p>
-          </div>
+        <div className="bg-gray-900 p-2 rounded-3xl border border-gray-800 shadow-2xl">
+          <SignIn
+            routing="hash"
+            appearance={{
+              variables: {
+                colorPrimary: "#03856b",
+                colorBackground: "#0f172a",
+              },
+            }}
+          />
         </div>
       </div>
     );
@@ -376,7 +369,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="p-4 rounded-2xl bg-gray-800/80 border border-gray-700/80 text-xs text-gray-300">
-            Please log out and sign in with an authorized Whitelisted Admin Gmail account.
+            Please log out and sign in with an authorized Admin Gmail account.
           </div>
 
           <div className="flex justify-center pt-2">
@@ -853,15 +846,21 @@ export default function AdminDashboardPage() {
                 Admin Manager Whitelist & System Control
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                Add or Remove Admin Manager Gmails. Only whitelisted Gmails can access Admin Panel.
+                Create new Admin Manager accounts with Gmail & Custom Passwords.
               </p>
             </div>
 
-            {/* Add New Admin Manager Form */}
+            {/* Create Admin Account in Clerk & Supabase Form */}
             <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-4">
               <h3 className="font-bold text-white text-base">
-                ➕ Add New Authorized Admin Gmail Address
+                ➕ Create & Whitelist New Admin Account
               </h3>
+
+              {createdAdminNotice && (
+                <div className="p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold font-mono">
+                  {createdAdminNotice}
+                </div>
+              )}
 
               <form onSubmit={handleAddAdminAccount} className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
@@ -879,17 +878,31 @@ export default function AdminDashboardPage() {
                     />
                   </div>
 
-                  <div className="flex items-center pt-5">
-                    <label className="inline-flex items-center gap-2 text-xs text-gray-300 font-semibold cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={autoVerifyNewAdmin}
-                        onChange={(e) => setAutoVerifyNewAdmin(e.target.checked)}
-                        className="w-4 h-4 rounded text-[#03856b] focus:ring-0"
-                      />
-                      Auto-Verify & Grant Full Admin Access Instantly
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 mb-1">
+                      Set Password for New Admin:
                     </label>
+                    <input
+                      type="text"
+                      required
+                      value={newAdminPassword}
+                      onChange={(e) => setNewAdminPassword(e.target.value)}
+                      placeholder="AdminPass2026!"
+                      className="w-full px-4 py-2.5 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                    />
                   </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="inline-flex items-center gap-2 text-xs text-gray-300 font-semibold cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={autoVerifyNewAdmin}
+                      onChange={(e) => setAutoVerifyNewAdmin(e.target.checked)}
+                      className="w-4 h-4 rounded text-[#03856b] focus:ring-0"
+                    />
+                    Pre-Register Account & Grant Full Admin Control Instantly
+                  </label>
                 </div>
 
                 <button
@@ -897,12 +910,12 @@ export default function AdminDashboardPage() {
                   disabled={addingAdmin}
                   className="px-6 py-2.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition-colors"
                 >
-                  {addingAdmin ? "Adding Admin..." : "Add Admin Gmail to Whitelist →"}
+                  {addingAdmin ? "Creating Admin Account..." : "Create Admin Account & Whitelist →"}
                 </button>
               </form>
             </div>
 
-            {/* Whitelisted Admin Managers List Table with REMOVE BUTTON FOR ALL ADMINS EXCEPT MAIN SUPER ADMIN */}
+            {/* Whitelisted Admin Managers List Table */}
             <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
               <div className="p-4 bg-gray-800/80 border-b border-gray-800">
                 <h3 className="font-bold text-white text-xs uppercase tracking-wider">
