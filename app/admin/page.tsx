@@ -34,6 +34,7 @@ interface PaymentLog {
 
 interface WhitelistedAdmin {
   email: string;
+  password?: string;
   status: string;
   token: string;
   isSuper?: boolean;
@@ -174,6 +175,32 @@ export default function AdminDashboardPage() {
       alert(err.message || "Error adding admin Gmail");
     } finally {
       setAddingAdmin(false);
+    }
+  };
+
+  const handleRemoveAdminGmail = async (adminEmailToRemove: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to REMOVE Admin Authority for ${adminEmailToRemove}?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/whitelist", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: adminEmailToRemove }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to remove Admin Gmail");
+
+      alert(`🗑️ Admin access for ${adminEmailToRemove} removed successfully!`);
+      loadAdminData();
+    } catch (err: any) {
+      alert(err.message || "Error removing admin Gmail");
     }
   };
 
@@ -802,7 +829,7 @@ export default function AdminDashboardPage() {
                 Admin Manager Whitelist & System Control
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                Add new Admin Manager Gmails. Only whitelisted Gmails can access Admin Panel.
+                Add or Remove Admin Manager Gmails. Only whitelisted Gmails can access Admin Panel.
               </p>
             </div>
 
@@ -851,7 +878,7 @@ export default function AdminDashboardPage() {
               </form>
             </div>
 
-            {/* Whitelisted Admin Managers List */}
+            {/* Whitelisted Admin Managers List Table with REMOVE ADMIN BUTTON */}
             <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
               <div className="p-4 bg-gray-800/80 border-b border-gray-800">
                 <h3 className="font-bold text-white text-xs uppercase tracking-wider">
@@ -877,7 +904,7 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       {adm.status === "verified" ? (
                         <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                           ✓ Verified & Active
@@ -886,6 +913,15 @@ export default function AdminDashboardPage() {
                         <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
                           ⏳ Pending Verification
                         </span>
+                      )}
+
+                      {!adm.isSuper && (
+                        <button
+                          onClick={() => handleRemoveAdminGmail(adm.email)}
+                          className="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-[11px] border border-red-500/30 transition-colors"
+                        >
+                          🗑️ Remove Admin Access
+                        </button>
                       )}
                     </div>
                   </div>

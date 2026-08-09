@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { currentUser } from "@clerk/nextjs/server";
+import { createServerSupabaseClient } from "@/lib/supabase";
 import {
   getAllAdminCredentials,
   addNewAdminAccount,
 } from "@/lib/adminWhitelist";
+
+const PROTECTED_SUPER_ADMIN = "ashishkushwaha1822@gmail.com";
 
 /**
  * GET /api/admin/whitelist
@@ -27,22 +31,20 @@ export async function GET() {
 
 /**
  * POST /api/admin/whitelist
- * Adds a new Admin Gmail + Custom Password + Verification Link
+ * Adds a new Admin Gmail to Whitelist
  */
 export async function POST(req: NextRequest) {
   try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { email, password = "FlowchatAdmin2026!", autoVerify = true } = body;
 
     if (!email || !email.includes("@")) {
       return NextResponse.json({ error: "Invalid Gmail address" }, { status: 400 });
-    }
-
-    if (!password || password.length < 6) {
-      return NextResponse.json(
-        { error: "Custom password must be at least 6 characters" },
-        { status: 400 }
-      );
     }
 
     const cleanEmail = email.toLowerCase().trim();
@@ -56,18 +58,55 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to add Admin account" }, { status: 500 });
     }
 
-    const verificationLink = `https://earnwithads.in/admin/verify?token=${token}&email=${encodeURIComponent(
-      cleanEmail
-    )}`;
+    return NextResponse.json({
+      success: true,
+      message: `✓ Admin Gmail ${cleanEmail} added to Whitelist!`,
+      email: cleanEmail,
+    });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/admin/whitelist
+ * Removes / Revokes an Admin Gmail from the Whitelist
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { email } = body;
+
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+
+    if (cleanEmail === PROTECTED_SUPER_ADMIN) {
+      return NextResponse.json(
+        { error: "Cannot delete Master Super Admin account" },
+        { status: 403 }
+      );
+    }
+
+    const supabase = createServerSupabaseClient();
+
+    // Delete from admin whitelist records
+    await supabase
+      .from("payments")
+      .delete()
+      .eq("email", cleanEmail)
+      .in("plan", ["admin_whitelisted_account", "admin_whitelisted_email"]);
 
     return NextResponse.json({
       success: true,
-      message: autoVerify
-        ? `✓ Admin Gmail ${cleanEmail} verified with custom password!`
-        : `Admin Gmail added! Verification link generated for ${cleanEmail}.`,
-      verificationLink: verificationLink,
-      token: token,
-      email: cleanEmail,
+      message: `✓ Admin authority for ${cleanEmail} removed successfully!`,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
