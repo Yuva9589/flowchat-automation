@@ -31,7 +31,7 @@ export async function GET() {
 
 /**
  * POST /api/admin/whitelist
- * Adds a new Admin Gmail to Whitelist in Supabase DB
+ * Adds a new Admin Gmail directly into Supabase `users` table!
  */
 export async function POST(req: NextRequest) {
   try {
@@ -49,26 +49,15 @@ export async function POST(req: NextRequest) {
 
     const cleanEmail = email.toLowerCase().trim();
 
-    // Get admin user_id if available
-    const supabase = createServerSupabaseClient();
-    const { data: dbAdminUser } = await supabase
-      .from("users")
-      .select("id")
-      .eq("clerk_user_id", clerkUser.id)
-      .single();
-
-    const currentAdminUserId = dbAdminUser?.id;
-
     const { success, token, error: addErr } = await addNewAdminAccount(
       cleanEmail,
       password,
-      autoVerify,
-      currentAdminUserId
+      autoVerify
     );
 
     if (!success) {
       return NextResponse.json(
-        { error: addErr || "Failed to insert Admin record into Supabase DB" },
+        { error: addErr || "Failed to add Admin Gmail into Supabase DB" },
         { status: 500 }
       );
     }
@@ -96,7 +85,7 @@ export async function POST(req: NextRequest) {
 
 /**
  * DELETE /api/admin/whitelist
- * Permanently removes an Admin Gmail from Supabase DB Whitelist
+ * Removes Admin Gmail authority from Supabase `users` table directly!
  */
 export async function DELETE(req: NextRequest) {
   try {
@@ -123,14 +112,18 @@ export async function DELETE(req: NextRequest) {
 
     const supabase = createServerSupabaseClient();
 
-    // Reset user plan in users table
+    // 1. Reset user plan in `users` table
     await supabase
       .from("users")
       .update({ plan: "free_trial", custom_access_granted: false })
       .eq("email", cleanEmail);
 
-    // Delete from Supabase DB payments/whitelist table
-    await supabase.from("payments").delete().eq("email", cleanEmail);
+    // 2. Try deleting from payments table if present
+    try {
+      await supabase.from("payments").delete().eq("email", cleanEmail);
+    } catch (e) {
+      // Optional fallback
+    }
 
     const updatedAdmins = await getAllAdminCredentials();
 

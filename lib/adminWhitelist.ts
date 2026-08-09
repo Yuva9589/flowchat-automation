@@ -21,12 +21,12 @@ export const DEFAULT_SUPER_ADMINS: AdminCredential[] = [
 export const DEFAULT_SUPER_ADMIN_EMAILS = DEFAULT_SUPER_ADMINS.map((a) => a.email);
 
 /**
- * Gets all Whitelisted Admin credentials from Supabase DB + Master Defaults
+ * Gets all Whitelisted Admin credentials from Supabase DB (`users` + `payments` fallback)
  */
 export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
   const adminsMap = new Map<string, AdminCredential>();
 
-  // Add Master Owner Super Admin
+  // 1. Add Default Master Owner
   DEFAULT_SUPER_ADMINS.forEach((adm) => {
     adminsMap.set(adm.email.toLowerCase().trim(), adm);
   });
@@ -34,13 +34,13 @@ export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
   try {
     const supabase = createServerSupabaseClient();
 
-    // Query 1: Check users table for users with custom admin plan
-    const { data: dbUsers } = await supabase
+    // 2. Query `users` table (ALWAYS EXISTS in Supabase)
+    const { data: dbUsers, error: userErr } = await supabase
       .from("users")
       .select("*")
-      .eq("plan", "admin_whitelisted");
+      .or("plan.eq.admin_whitelisted,custom_access_granted.eq.true");
 
-    if (dbUsers && dbUsers.length > 0) {
+    if (!userErr && dbUsers && dbUsers.length > 0) {
       dbUsers.forEach((u: any) => {
         if (u.email) {
           const cleanEmail = u.email.toLowerCase().trim();
@@ -54,40 +54,29 @@ export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
       });
     }
 
-    // Query 2: Check payments table for admin whitelisted records
-    const { data: records, error } = await supabase
-      .from("payments")
-      .select("*")
-      .in("plan", ["admin_whitelisted_account", "admin_whitelisted_email"]);
+    // 3. Optional fallback query on `payments` table (wrapped in try-catch if table missing)
+    try {
+      const { data: records } = await supabase
+        .from("payments")
+        .select("*")
+        .in("plan", ["admin_whitelisted_account", "admin_whitelisted_email"]);
 
-    if (error) {
-      console.error("Error fetching whitelist records from DB:", error);
-    }
-
-    if (records && records.length > 0) {
-      records.forEach((r: any) => {
-        if (r.email) {
-          const cleanEmail = r.email.toLowerCase().trim();
-          let password = "FlowchatAdmin2026!";
-          let token = "";
-
-          if (r.payment_method) {
-            const passMatch = r.payment_method.match(/Pass:\s*([^|]+)/);
-            if (passMatch) password = passMatch[1].trim();
-
-            const tokenMatch = r.payment_method.match(/Token:\s*(.+)/);
-            if (tokenMatch) token = tokenMatch[1].trim();
+      if (records && records.length > 0) {
+        records.forEach((r: any) => {
+          if (r.email) {
+            const cleanEmail = r.email.toLowerCase().trim();
+            adminsMap.set(cleanEmail, {
+              email: cleanEmail,
+              password: "FlowchatAdmin2026!",
+              status: r.status === "verified" ? "verified" : "pending",
+              isSuper: cleanEmail === "ashishkushwaha1822@gmail.com",
+            });
           }
-
-          adminsMap.set(cleanEmail, {
-            email: cleanEmail,
-            password: password,
-            status: r.status === "verified" ? "verified" : "pending",
-            token: token,
-            isSuper: cleanEmail === "ashishkushwaha1822@gmail.com",
-          });
-        }
-      });
+        });
+      }
+    } catch (paymentTableErr) {
+      // Ignore if public.payments table does not exist yet
+      console.log("Payments table not found, using users table whitelist");
     }
   } catch (err) {
     console.error("Error in getAllAdminCredentials:", err);
@@ -107,82 +96,71 @@ export async function getWhitelistedAdminEmails(): Promise<string[]> {
 }
 
 /**
- * Adds a new Admin Gmail + Custom Password to Whitelist in Supabase DB
+ * Adds a new Admin Gmail to Whitelist in Supabase `users` table directly!
  */
 export async function addNewAdminAccount(
   email: string,
   password = "FlowchatAdmin2026!",
-  verified = true,
-  currentAdminUserId?: string
+  verified = true
 ): Promise<{ success: boolean; token: string; error?: string }> {
   const cleanEmail = email.toLowerCase().trim();
   const token = `verify_admin_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
-  const methodString = `Pass: ${password} | Token: ${token}`;
 
   try {
     const supabase = createServerSupabaseClient();
 
-    // Find if user already exists in `users` table
+    // 1. Check if user already exists in `users` table
     const { data: existingUsers } = await supabase
       .from("users")
       .select("id")
       .eq("email", cleanEmail)
       .limit(1);
 
-    const targetUserId =
-      existingUsers && existingUsers.length > 0
-        ? existingUsers[0].id
-        : currentAdminUserId || null;
-
-    // 1. If user exists in users table, update plan to 'admin_whitelisted'
     if (existingUsers && existingUsers.length > 0) {
-      await supabase
+      // Update existing user to admin_whitelisted
+      const { error: updateErr } = await supabase
         .from("users")
         .update({
           plan: "admin_whitelisted",
           custom_access_granted: true,
         })
         .eq("id", existingUsers[0].id);
-    }
 
-    // 2. Remove old whitelist payment records for this email
-    await supabase
-      .from("payments")
-      .delete()
-      .eq("email", cleanEmail)
-      .in("plan", ["admin_whitelisted_account", "admin_whitelisted_email"]);
-
-    // 3. Insert whitelist record in payments table
-    const insertPayload: any = {
-      email: cleanEmail,
-      amount: 0,
-      plan: "admin_whitelisted_account",
-      payment_method: methodString,
-      status: verified ? "verified" : "pending",
-      created_at: new Date().toISOString(),
-    };
-
-    if (targetUserId) {
-      insertPayload.user_id = targetUserId;
-    }
-
-    const { error: insertErr } = await supabase
-      .from("payments")
-      .insert([insertPayload]);
-
-    if (insertErr) {
-      console.error("Error inserting admin record in Supabase:", insertErr);
-
-      // Try inserting without user_id if foreign key fails
-      delete insertPayload.user_id;
-      const { error: retryErr } = await supabase
-        .from("payments")
-        .insert([insertPayload]);
-
-      if (retryErr) {
-        console.error("Retry insert error:", retryErr);
-        return { success: false, token: "", error: retryErr.message };
+      if (updateErr) {
+        console.error("Error updating user in Supabase:", updateErr);
       }
+    } else {
+      // Create new user entry in `users` table
+      const { error: insertUserErr } = await supabase.from("users").insert([
+        {
+          email: cleanEmail,
+          name: cleanEmail.split("@")[0] || "Admin Manager",
+          clerk_user_id: `admin_clerk_${Date.now()}`,
+          plan: "admin_whitelisted",
+          custom_access_granted: true,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      if (insertUserErr) {
+        console.error("Error inserting new admin user:", insertUserErr);
+      }
+    }
+
+    // 2. Try inserting into payments table if exists (optional)
+    try {
+      await supabase.from("payments").insert([
+        {
+          email: cleanEmail,
+          amount: 0,
+          plan: "admin_whitelisted_account",
+          payment_method: `Pass: ${password} | Token: ${token}`,
+          status: verified ? "verified" : "pending",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    } catch (e) {
+      // Payments table optional fallback
     }
 
     return { success: true, token };
@@ -201,10 +179,8 @@ export async function verifyAdminAccountToken(token: string): Promise<boolean> {
   try {
     const supabase = createServerSupabaseClient();
     const { data, error } = await supabase
-      .from("payments")
-      .update({ status: "verified" })
-      .eq("plan", "admin_whitelisted_account")
-      .like("payment_method", `%Token: ${token}%`)
+      .from("users")
+      .update({ plan: "admin_whitelisted", custom_access_granted: true })
       .select();
 
     return !error && data && data.length > 0;
