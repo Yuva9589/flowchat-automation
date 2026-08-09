@@ -33,6 +33,28 @@ export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
 
   try {
     const supabase = createServerSupabaseClient();
+
+    // Query 1: Check users table for users with custom admin plan
+    const { data: dbUsers } = await supabase
+      .from("users")
+      .select("*")
+      .eq("plan", "admin_whitelisted");
+
+    if (dbUsers && dbUsers.length > 0) {
+      dbUsers.forEach((u: any) => {
+        if (u.email) {
+          const cleanEmail = u.email.toLowerCase().trim();
+          adminsMap.set(cleanEmail, {
+            email: cleanEmail,
+            password: "FlowchatAdmin2026!",
+            status: "verified",
+            isSuper: cleanEmail === "ashishkushwaha1822@gmail.com",
+          });
+        }
+      });
+    }
+
+    // Query 2: Check payments table for admin whitelisted records
     const { data: records, error } = await supabase
       .from("payments")
       .select("*")
@@ -90,8 +112,9 @@ export async function getWhitelistedAdminEmails(): Promise<string[]> {
 export async function addNewAdminAccount(
   email: string,
   password = "FlowchatAdmin2026!",
-  verified = true
-): Promise<{ success: boolean; token: string }> {
+  verified = true,
+  currentAdminUserId?: string
+): Promise<{ success: boolean; token: string; error?: string }> {
   const cleanEmail = email.toLowerCase().trim();
   const token = `verify_admin_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
   const methodString = `Pass: ${password} | Token: ${token}`;
@@ -99,35 +122,73 @@ export async function addNewAdminAccount(
   try {
     const supabase = createServerSupabaseClient();
 
-    // 1. Remove any old pending record for this email
+    // Find if user already exists in `users` table
+    const { data: existingUsers } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", cleanEmail)
+      .limit(1);
+
+    const targetUserId =
+      existingUsers && existingUsers.length > 0
+        ? existingUsers[0].id
+        : currentAdminUserId || null;
+
+    // 1. If user exists in users table, update plan to 'admin_whitelisted'
+    if (existingUsers && existingUsers.length > 0) {
+      await supabase
+        .from("users")
+        .update({
+          plan: "admin_whitelisted",
+          custom_access_granted: true,
+        })
+        .eq("id", existingUsers[0].id);
+    }
+
+    // 2. Remove old whitelist payment records for this email
     await supabase
       .from("payments")
       .delete()
       .eq("email", cleanEmail)
       .in("plan", ["admin_whitelisted_account", "admin_whitelisted_email"]);
 
-    // 2. Insert fresh verified admin record
-    const { error } = await supabase.from("payments").insert([
-      {
-        user_id: "00000000-0000-0000-0000-000000000000",
-        email: cleanEmail,
-        amount: 0,
-        plan: "admin_whitelisted_account",
-        payment_method: methodString,
-        status: verified ? "verified" : "pending",
-        created_at: new Date().toISOString(),
-      },
-    ]);
+    // 3. Insert whitelist record in payments table
+    const insertPayload: any = {
+      email: cleanEmail,
+      amount: 0,
+      plan: "admin_whitelisted_account",
+      payment_method: methodString,
+      status: verified ? "verified" : "pending",
+      created_at: new Date().toISOString(),
+    };
 
-    if (error) {
-      console.error("Error inserting admin record in Supabase:", error);
-      return { success: false, token: "" };
+    if (targetUserId) {
+      insertPayload.user_id = targetUserId;
+    }
+
+    const { error: insertErr } = await supabase
+      .from("payments")
+      .insert([insertPayload]);
+
+    if (insertErr) {
+      console.error("Error inserting admin record in Supabase:", insertErr);
+
+      // Try inserting without user_id if foreign key fails
+      delete insertPayload.user_id;
+      const { error: retryErr } = await supabase
+        .from("payments")
+        .insert([insertPayload]);
+
+      if (retryErr) {
+        console.error("Retry insert error:", retryErr);
+        return { success: false, token: "", error: retryErr.message };
+      }
     }
 
     return { success: true, token };
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error adding new admin account:", err);
-    return { success: false, token: "" };
+    return { success: false, token: "", error: err.message };
   }
 }
 

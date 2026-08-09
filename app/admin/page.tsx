@@ -60,8 +60,9 @@ export default function AdminDashboardPage() {
   /* Add New Admin Gmail Form State */
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [autoVerifyNewAdmin, setAutoVerifyNewAdmin] = useState(true);
-  const [generatedLink, setGeneratedLink] = useState("");
+  const [generatedVerificationLink, setGeneratedVerificationLink] = useState("");
   const [addingAdmin, setAddingAdmin] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   /* Razorpay Gateway Keys State */
   const [razorpayKeyId, setRazorpayKeyId] = useState("rzp_live_Flowchat2026Key");
@@ -154,7 +155,7 @@ export default function AdminDashboardPage() {
     if (!newAdminEmail) return;
 
     setAddingAdmin(true);
-    setGeneratedLink("");
+    setGeneratedVerificationLink("");
 
     try {
       const res = await fetch("/api/admin/whitelist", {
@@ -170,14 +171,14 @@ export default function AdminDashboardPage() {
       if (!res.ok) throw new Error(data.error || "Failed to add Admin Gmail");
 
       if (data.verificationLink) {
-        setGeneratedLink(data.verificationLink);
+        setGeneratedVerificationLink(data.verificationLink);
       }
 
       if (data.admins) {
         setAdminWhitelist(data.admins);
       }
 
-      alert(`✓ Admin Gmail ${newAdminEmail} added to Whitelist with Full Admin Control!`);
+      alert(`✓ Admin Gmail ${newAdminEmail} added successfully!`);
       setNewAdminEmail("");
       loadAdminData();
     } catch (err: any) {
@@ -185,6 +186,13 @@ export default function AdminDashboardPage() {
     } finally {
       setAddingAdmin(false);
     }
+  };
+
+  const handleCopyLink = () => {
+    if (!generatedVerificationLink) return;
+    navigator.clipboard.writeText(generatedVerificationLink);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   const handleRemoveAdminGmail = async (adminEmailToRemove: string) => {

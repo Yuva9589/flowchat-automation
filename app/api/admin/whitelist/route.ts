@@ -48,21 +48,35 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const { success, token } = await addNewAdminAccount(
+
+    // Get admin user_id if available
+    const supabase = createServerSupabaseClient();
+    const { data: dbAdminUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("clerk_user_id", clerkUser.id)
+      .single();
+
+    const currentAdminUserId = dbAdminUser?.id;
+
+    const { success, token, error: addErr } = await addNewAdminAccount(
       cleanEmail,
       password,
-      autoVerify
+      autoVerify,
+      currentAdminUserId
     );
 
     if (!success) {
-      return NextResponse.json({ error: "Failed to add Admin account" }, { status: 500 });
+      return NextResponse.json(
+        { error: addErr || "Failed to insert Admin record into Supabase DB" },
+        { status: 500 }
+      );
     }
 
     const verificationLink = `https://earnwithads.in/admin/verify?token=${token}&email=${encodeURIComponent(
       cleanEmail
     )}`;
 
-    // Return updated admin list
     const updatedAdmins = await getAllAdminCredentials();
 
     return NextResponse.json({
@@ -109,17 +123,14 @@ export async function DELETE(req: NextRequest) {
 
     const supabase = createServerSupabaseClient();
 
-    // Delete from Supabase DB
-    const { error } = await supabase
-      .from("payments")
-      .delete()
-      .eq("email", cleanEmail)
-      .in("plan", ["admin_whitelisted_account", "admin_whitelisted_email"]);
+    // Reset user plan in users table
+    await supabase
+      .from("users")
+      .update({ plan: "free_trial", custom_access_granted: false })
+      .eq("email", cleanEmail);
 
-    if (error) {
-      console.error("Error deleting admin email:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    // Delete from Supabase DB payments/whitelist table
+    await supabase.from("payments").delete().eq("email", cleanEmail);
 
     const updatedAdmins = await getAllAdminCredentials();
 
