@@ -104,6 +104,7 @@ export default function AdminDashboardPage() {
     setIsSendingOtp(true);
     setLoginError("");
     setOtpSentMsg("");
+    setOtpInput(""); // Ensure field is empty for user to type OTP
 
     try {
       const res = await fetch("/api/admin/send-otp", {
@@ -135,7 +136,7 @@ export default function AdminDashboardPage() {
     setIsLoggingIn(true);
     setLoginError("");
 
-    if (!otpInput) {
+    if (!otpInput || otpInput.trim().length < 4) {
       setLoginError("Please enter the 6-digit OTP code sent to your Gmail inbox");
       setIsLoggingIn(false);
       return;
@@ -148,7 +149,7 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({
           email: adminGmailInput,
           password: adminPasswordInput,
-          otp: otpInput,
+          otp: otpInput.trim(),
         }),
       });
 
@@ -208,6 +209,7 @@ export default function AdminDashboardPage() {
     e.preventDefault();
     setForgotErr("");
     setForgotMsg("");
+    setForgotOtp(""); // Ensure OTP input is empty for typing
 
     try {
       const res = await fetch("/api/admin/forgot-password", {
@@ -231,13 +233,18 @@ export default function AdminDashboardPage() {
     setForgotErr("");
     setForgotMsg("");
 
+    if (!forgotOtp || forgotOtp.trim().length < 4) {
+      setForgotErr("Please enter the 6-digit OTP code sent to your Gmail inbox");
+      return;
+    }
+
     try {
       const res = await fetch("/api/admin/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: forgotEmail,
-          otp: forgotOtp,
+          otp: forgotOtp.trim(),
           newUsername: resetAdminUsername,
           newPassword: resetAdminPassword,
         }),
@@ -443,6 +450,7 @@ export default function AdminDashboardPage() {
                     setForgotStep("email");
                     setForgotErr("");
                     setForgotMsg("");
+                    setForgotOtp("");
                   }}
                   className="text-xs text-emerald-400 font-semibold hover:underline"
                 >
@@ -480,6 +488,7 @@ export default function AdminDashboardPage() {
                 onChange={(e) => setOtpInput(e.target.value)}
                 placeholder="Enter 6-digit OTP code from Gmail"
                 required
+                autoComplete="off"
                 className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -560,6 +569,7 @@ export default function AdminDashboardPage() {
                       onChange={(e) => setForgotOtp(e.target.value)}
                       placeholder="Enter 6-digit OTP code"
                       required
+                      autoComplete="off"
                       className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -1362,6 +1372,7 @@ export default function AdminDashboardPage() {
                     onChange={(e) => setForgotOtp(e.target.value)}
                     placeholder="Enter 6-digit OTP code"
                     required
+                    autoComplete="off"
                     className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
                   />
                 </div>
