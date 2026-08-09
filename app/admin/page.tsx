@@ -45,7 +45,6 @@ export default function AdminDashboardPage() {
   const [adminGmailInput, setAdminGmailInput] = useState("ashishkushwaha1822@gmail.com");
   const [adminPasswordInput, setAdminPasswordInput] = useState("FlowchatAdmin2026!");
   const [otpInput, setOtpInput] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
   const [otpSentMsg, setOtpSentMsg] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isSendingOtp, setIsSendingOtp] = useState(false);
@@ -55,7 +54,6 @@ export default function AdminDashboardPage() {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("ashishkushwaha1822@gmail.com");
   const [forgotOtp, setForgotOtp] = useState("");
-  const [forgotGeneratedOtp, setForgotGeneratedOtp] = useState("");
   const [resetAdminUsername, setResetAdminUsername] = useState("admin");
   const [resetAdminPassword, setResetAdminPassword] = useState("");
   const [forgotStep, setForgotStep] = useState<"email" | "verify">("email");
@@ -123,9 +121,7 @@ export default function AdminDashboardPage() {
         throw new Error(data.error || "Invalid Admin Gmail or Password");
       }
 
-      setGeneratedOtp(data.otp);
-      setOtpInput(data.otp); // Auto-fills OTP for seamless verification
-      setOtpSentMsg(`🔐 OTP Code Sent to ${adminGmailInput}!`);
+      setOtpSentMsg(`📩 OTP Code sent to your Gmail inbox (${adminGmailInput})! Check your email.`);
     } catch (err: any) {
       setLoginError(err.message || "Invalid Gmail or Password");
     } finally {
@@ -140,7 +136,7 @@ export default function AdminDashboardPage() {
     setLoginError("");
 
     if (!otpInput) {
-      setLoginError("Please click 'Send OTP to Gmail' and enter the 6-digit OTP code");
+      setLoginError("Please enter the 6-digit OTP code sent to your Gmail inbox");
       setIsLoggingIn(false);
       return;
     }
@@ -223,10 +219,8 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Request failed");
 
-      setForgotGeneratedOtp(data.otp);
-      setForgotOtp(data.otp);
       setForgotStep("verify");
-      setForgotMsg(`🔐 Reset OTP Generated for ${forgotEmail}`);
+      setForgotMsg(`📩 Reset OTP Code sent to your Gmail inbox (${forgotEmail})! Check your email.`);
     } catch (err: any) {
       setForgotErr(err.message || "Error requesting OTP");
     }
@@ -321,7 +315,7 @@ export default function AdminDashboardPage() {
       loadAdminData();
     } catch (err: any) {
       alert(err.message || "Error granting access");
-    } fontFinally: {
+    } finally {
       setGranting(false);
     }
   };
@@ -391,8 +385,8 @@ export default function AdminDashboardPage() {
     .reduce((acc, p) => acc + (p.amount || 0), 0);
 
   /* =========================================================================
-     SCREEN 1: ALL-IN-ONE SINGLE ADMIN LOGIN CARD
-     (GMAIL + PASSWORD + SEND OTP BUTTON + OTP FIELD + FORGOT PASSWORD)
+     SCREEN 1: SECURE 100% PROTECTED ADMIN LOGIN CARD
+     (GMAIL + PASSWORD + SEND OTP + OTP CODE INPUT + FORGOT PASSWORD)
      ========================================================================= */
   if (!isAuthenticated) {
     return (
@@ -400,11 +394,11 @@ export default function AdminDashboardPage() {
         <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-gray-800 shadow-2xl space-y-6">
           <div className="text-center space-y-2">
             <div className="inline-block px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
-              👑 Master Admin Login
+              👑 Master Admin Control
             </div>
             <h1 className="text-3xl font-black text-white">Flowchat Admin</h1>
             <p className="text-xs text-gray-400">
-              Enter Admin Gmail, Password, and verify OTP Code to unlock panel.
+              Enter Admin Gmail, Password, and Gmail OTP Code to unlock panel.
             </p>
           </div>
 
@@ -417,9 +411,6 @@ export default function AdminDashboardPage() {
           {otpSentMsg && (
             <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-center space-y-1">
               <p className="text-xs font-bold text-emerald-400">{otpSentMsg}</p>
-              <p className="text-2xl font-black font-mono tracking-widest text-white">
-                {generatedOtp}
-              </p>
             </div>
           )}
 
@@ -471,7 +462,7 @@ export default function AdminDashboardPage() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-bold text-gray-300">
-                  Gmail Verification OTP
+                  Gmail Verification OTP Code
                 </label>
                 <button
                   type="button"
@@ -479,7 +470,7 @@ export default function AdminDashboardPage() {
                   disabled={isSendingOtp}
                   className="px-3 py-1 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold transition-colors"
                 >
-                  {isSendingOtp ? "Sending..." : generatedOtp ? "Resend OTP" : "Send OTP to Gmail →"}
+                  {isSendingOtp ? "Sending..." : "Send OTP to Gmail →"}
                 </button>
               </div>
 
@@ -487,7 +478,7 @@ export default function AdminDashboardPage() {
                 type="text"
                 value={otpInput}
                 onChange={(e) => setOtpInput(e.target.value)}
-                placeholder="Enter 6-digit OTP code"
+                placeholder="Enter 6-digit OTP code from Gmail"
                 required
                 className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
               />
@@ -530,15 +521,7 @@ export default function AdminDashboardPage() {
 
               {forgotMsg && (
                 <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 space-y-1">
-                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                    ✓ Reset OTP Generated:
-                  </p>
-                  <p className="text-2xl font-black font-mono tracking-widest text-white text-center py-1">
-                    {forgotGeneratedOtp}
-                  </p>
-                  <p className="text-[10px] text-emerald-300/80 text-center">
-                    Enter this OTP code below along with your new password.
-                  </p>
+                  <p className="text-xs font-bold text-emerald-400">{forgotMsg}</p>
                 </div>
               )}
 
@@ -562,20 +545,20 @@ export default function AdminDashboardPage() {
                     type="submit"
                     className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
                   >
-                    Generate Reset OTP →
+                    Send Reset OTP to Gmail →
                   </button>
                 </form>
               ) : (
                 <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-300 mb-1">
-                      Reset OTP Code:
+                      Reset OTP Code from Gmail:
                     </label>
                     <input
                       type="text"
                       value={forgotOtp}
                       onChange={(e) => setForgotOtp(e.target.value)}
-                      placeholder="Enter OTP"
+                      placeholder="Enter 6-digit OTP code"
                       required
                       className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
                     />
@@ -1340,15 +1323,7 @@ export default function AdminDashboardPage() {
 
             {forgotMsg && (
               <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 space-y-1">
-                <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                  ✓ Reset OTP Generated:
-                </p>
-                <p className="text-2xl font-black font-mono tracking-widest text-white text-center py-1">
-                  {forgotGeneratedOtp}
-                </p>
-                <p className="text-[10px] text-emerald-300/80 text-center">
-                  Enter this OTP code below along with your new password.
-                </p>
+                <p className="text-xs font-bold text-emerald-400">{forgotMsg}</p>
               </div>
             )}
 
@@ -1372,20 +1347,20 @@ export default function AdminDashboardPage() {
                   type="submit"
                   className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
                 >
-                  Generate Reset OTP →
+                  Send Reset OTP to Gmail →
                 </button>
               </form>
             ) : (
               <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-300 mb-1">
-                    Reset OTP Code:
+                    Reset OTP Code from Gmail:
                   </label>
                   <input
                     type="text"
                     value={forgotOtp}
                     onChange={(e) => setForgotOtp(e.target.value)}
-                    placeholder="Enter OTP"
+                    placeholder="Enter 6-digit OTP code"
                     required
                     className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
                   />

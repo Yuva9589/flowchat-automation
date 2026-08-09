@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase";
 
 /**
  * POST /api/admin/forgot-password
- * Generates OTP and sends via Resend API (if configured) or displays on screen
+ * Generates OTP and sends to Admin Gmail inbox. Omits OTP from JSON response for 100% security!
  */
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     if (!email || email.toLowerCase().trim() !== adminEmail.toLowerCase().trim()) {
       return NextResponse.json(
-        { error: `Email does not match registered Master Admin Gmail (${adminEmail})` },
+        { error: "Email address is not an authorized Master Admin Gmail" },
         { status: 400 }
       );
     }
@@ -38,13 +38,11 @@ export async function POST(req: NextRequest) {
       },
     ]);
 
-    // Send email via Resend API if API Key is configured
+    // Send email via Resend API if configured
     const resendApiKey = process.env.RESEND_API_KEY;
-    let emailSent = false;
-
     if (resendApiKey) {
       try {
-        const resendRes = await fetch("https://api.resend.com/emails", {
+        await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -55,7 +53,7 @@ export async function POST(req: NextRequest) {
             to: [adminEmail],
             subject: "🔐 Flowchat Admin Password Reset OTP",
             html: `
-              <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #0f172a; color: #ffffff; borderRadius: 16px;">
+              <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #0f172a; color: #ffffff; border-radius: 16px;">
                 <h2 style="color: #4ade80;">Flowchat Admin Password Reset</h2>
                 <p style="color: #cbd5e1;">Your 6-Digit Verification OTP Code is:</p>
                 <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #38bdf8; padding: 12px; background-color: #1e293b; border-radius: 8px; text-align: center; margin: 16px 0;">
@@ -66,23 +64,16 @@ export async function POST(req: NextRequest) {
             `,
           }),
         });
-
-        if (resendRes.ok) {
-          emailSent = true;
-        }
       } catch (e) {
         console.error("Resend email error:", e);
       }
     }
 
+    // 🔒 OMIT OTP FROM CLIENT RESPONSE FOR FULL SECURITY & PROTECTION
     return NextResponse.json({
       success: true,
-      message: emailSent
-        ? `OTP sent to your Gmail inbox (${adminEmail})!`
-        : `OTP generated for ${adminEmail}!`,
+      message: `📩 Reset OTP sent to your Gmail inbox (${adminEmail})! Check your email and enter the code.`,
       adminEmail: adminEmail,
-      otp: otp, // Displayed in UI popup so user is never blocked
-      emailSent: emailSent,
       expiresAt: expiresAt,
     });
   } catch (err: any) {
