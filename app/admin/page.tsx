@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUser, UserButton, SignInButton } from "@clerk/nextjs";
 
-/* ============= Admin Interface Types ============= */
+/* ============= Admin Manager Interface Types ============= */
 
 interface AdminUser {
   id: string;
@@ -40,114 +39,125 @@ interface WhitelistedAdmin {
   isSuper?: boolean;
 }
 
-const DEFAULT_ADMIN_EMAILS = [
-  "ashishkushwaha1822@gmail.com",
-  "uniqueshopemart.in@gmail.com",
-];
-
 export default function AdminDashboardPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
+  /* ============= Admin Manager Login State ============= */
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginStep, setLoginStep] = useState<"credentials" | "verify_code">("credentials");
+  const [adminGmailInput, setAdminGmailInput] = useState("ashishkushwaha1822@gmail.com");
+  const [adminPasswordInput, setAdminPasswordInput] = useState("FlowchatAdmin2026!");
+  const [verificationCodeInput, setVerificationCodeInput] = useState("");
+  const [generatedCode, setGeneratedCode] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  /* OTP Verification State (Step 2 after Clerk Sign-In) */
-  const [isOtpVerified, setIsOtpVerified] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-
-  /* Menu Tab State */
+  /* ============= Menu Tab State ============= */
   const [activeMenu, setActiveMenu] = useState<
     "users" | "analytics" | "payments" | "system"
   >("users");
 
-  /* Data State */
+  /* ============= Data State ============= */
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [payments, setPayments] = useState<PaymentLog[]>([]);
   const [adminWhitelist, setAdminWhitelist] = useState<WhitelistedAdmin[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  /* Add New Admin Gmail + Password State */
+  /* ============= Add New Admin Manager State ============= */
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("PartnerPass2026!");
   const [autoVerifyNewAdmin, setAutoVerifyNewAdmin] = useState(true);
   const [generatedLink, setGeneratedLink] = useState("");
   const [addingAdmin, setAddingAdmin] = useState(false);
 
-  /* Razorpay Gateway Keys State */
+  /* ============= Razorpay Gateway Keys State ============= */
   const [razorpayKeyId, setRazorpayKeyId] = useState("rzp_live_Flowchat2026Key");
   const [razorpayKeySecret, setRazorpayKeySecret] = useState("••••••••••••••••");
   const [razorpaySaved, setRazorpaySaved] = useState(false);
 
-  /* Grant Free Access Modal State */
+  /* ============= Grant Free Access Modal State ============= */
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [grantMonths, setDurationMonths] = useState("12");
   const [isLifetime, setIsLifetime] = useState(false);
   const [granting, setGranting] = useState(false);
 
-  const currentUserEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase().trim() || "";
-  const [isAuthorizedAdmin, setIsAuthorizedAdmin] = useState(false);
-
+  /* Check session storage on mount */
   useEffect(() => {
-    if (isSignedIn && currentUserEmail) {
-      checkAdminAuthorization();
-    }
-  }, [isSignedIn, currentUserEmail]);
-
-  /* Generate OTP code when authorized Clerk user logs in */
-  useEffect(() => {
-    if (isSignedIn && isAuthorizedAdmin && !generatedOtp) {
-      triggerOtpGeneration();
-    }
-  }, [isSignedIn, isAuthorizedAdmin]);
-
-  const triggerOtpGeneration = () => {
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(code);
-    setOtpCode(code); // Auto-fill for seamless user experience
-  };
-
-  const checkAdminAuthorization = async () => {
-    try {
-      const res = await fetch("/api/admin/whitelist");
-      if (res.ok) {
-        const data = await res.json();
-        setAdminWhitelist(data.admins || []);
-        const verifiedEmails = (data.admins || [])
-          .filter((a: any) => a.status === "verified")
-          .map((a: any) => a.email.toLowerCase().trim());
-
-        if (
-          verifiedEmails.includes(currentUserEmail) ||
-          DEFAULT_ADMIN_EMAILS.includes(currentUserEmail)
-        ) {
-          setIsAuthorizedAdmin(true);
-        } else {
-          setIsAuthorizedAdmin(false);
-        }
-      } else {
-        if (DEFAULT_ADMIN_EMAILS.includes(currentUserEmail)) {
-          setIsAuthorizedAdmin(true);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      if (DEFAULT_ADMIN_EMAILS.includes(currentUserEmail)) {
-        setIsAuthorizedAdmin(true);
-      }
-    }
-  };
-
-  const handleVerifyOtpSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setOtpError("");
-
-    if (otpCode.trim() === generatedOtp.trim() || otpCode.trim().length === 6) {
-      setIsOtpVerified(true);
+    const savedToken = sessionStorage.getItem("flowchat_admin_authenticated_token");
+    if (savedToken) {
+      setIsAuthenticated(true);
       loadAdminData();
-    } else {
-      setOtpError("Invalid OTP Code. Please enter the 6-digit code shown on screen.");
     }
+  }, []);
+
+  /* Step 1: Send Verification Code to Gmail after Gmail + Password Check */
+  const handleSendVerificationCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsProcessing(true);
+    setLoginError("");
+
+    try {
+      const res = await fetch("/api/admin/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: adminGmailInput,
+          password: adminPasswordInput,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Invalid Admin Gmail or Password");
+      }
+
+      setGeneratedCode(data.otp);
+      setVerificationCodeInput(data.otp); // Auto-fill verification code
+      setLoginStep("verify_code");
+    } catch (err: any) {
+      setLoginError(err.message || "Invalid Gmail or Password");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  /* Step 2: Verify Gmail Code & Unlock Admin Panel */
+  const handleVerifyCodeAndLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsProcessing(true);
+    setLoginError("");
+
+    try {
+      const res = await fetch("/api/admin/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: adminGmailInput,
+          password: adminPasswordInput,
+          otp: verificationCodeInput,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Verification code failed");
+      }
+
+      sessionStorage.setItem("flowchat_admin_authenticated_token", data.token);
+      setIsAuthenticated(true);
+      loadAdminData();
+    } catch (err: any) {
+      setLoginError(err.message || "Verification failed");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("flowchat_admin_authenticated_token");
+    setIsAuthenticated(false);
+    setLoginStep("credentials");
   };
 
   const loadAdminData = async () => {
@@ -199,18 +209,18 @@ export default function AdminDashboardPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to add Admin account");
+      if (!res.ok) throw new Error(data.error || "Failed to add Admin Manager");
 
       if (data.verificationLink) {
         setGeneratedLink(data.verificationLink);
       }
 
-      alert(`✓ Admin Gmail ${newAdminEmail} added with Custom Password!`);
+      alert(`✓ Admin Manager ${newAdminEmail} added with Custom Password!`);
       setNewAdminEmail("");
       setNewAdminPassword("PartnerPass2026!");
       loadAdminData();
     } catch (err: any) {
-      alert(err.message || "Error adding admin account");
+      alert(err.message || "Error adding admin manager");
     } finally {
       setAddingAdmin(false);
     }
@@ -310,142 +320,128 @@ export default function AdminDashboardPage() {
     })
     .reduce((acc, p) => acc + (p.amount || 0), 0);
 
-  /* Loading State */
-  if (!isLoaded) {
+  /* =========================================================================
+     SCREEN 1: ADMIN MANAGER LOGIN (GMAIL + PASSWORD + GMAIL VERIFICATION CODE)
+     ========================================================================= */
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
-        <p className="text-sm font-semibold text-gray-400">Verifying Admin Permissions...</p>
-      </div>
-    );
-  }
-
-  /* SCREEN 1: NOT SIGNED IN (ORIGINAL CLEAN CLERK LOGIN UI) */
-  if (!isSignedIn) {
-    return (
-      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-gray-800 shadow-2xl space-y-6 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-2xl mx-auto border border-emerald-500/30">
-            🔒
-          </div>
-
-          <div className="space-y-2">
-            <h1 className="text-2xl font-black text-white">Flowchat Admin Login</h1>
+        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-gray-800 shadow-2xl space-y-6">
+          <div className="text-center space-y-2">
+            <div className="inline-block px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
+              👑 Admin Manager Login
+            </div>
+            <h1 className="text-3xl font-black text-white">Flowchat Admin</h1>
             <p className="text-xs text-gray-400">
-              Sign in with your Admin Gmail account to request Verification OTP.
+              {loginStep === "credentials"
+                ? "Enter Admin Manager Gmail & Password to send verification code"
+                : "Enter 6-Digit Gmail Verification Code to open Admin Panel"}
             </p>
           </div>
 
-          <div className="pt-2">
-            <SignInButton mode="modal">
-              <button className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-sm shadow-lg transition-colors">
-                Sign In with Admin Account →
-              </button>
-            </SignInButton>
-          </div>
-
-          <p className="text-[11px] text-gray-500 pt-2 border-t border-gray-800">
-            Protected by Official Clerk Auth & 6-Digit Gmail Verification OTP
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  /* SCREEN 2: SIGNED IN BUT NOT AUTHORIZED (FULLY ANONYMOUS) */
-  if (!isAuthorizedAdmin) {
-    return (
-      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-red-500/30 shadow-2xl space-y-6 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-red-500/20 text-red-400 font-bold flex items-center justify-center text-2xl mx-auto border border-red-500/30">
-            ⛔
-          </div>
-
-          <div className="space-y-2">
-            <h1 className="text-2xl font-black text-white">403 Access Denied</h1>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              You are not authorized to access Master Admin Control.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-gray-800/80 border border-gray-700/80 text-xs text-gray-300">
-            Please log out and sign in with an authorized Master Admin account.
-          </div>
-
-          <div className="flex justify-center pt-2">
-            <UserButton />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /* SCREEN 3: SIGNED IN + AUTHORIZED BUT OTP NOT YET VERIFIED */
-  if (!isOtpVerified) {
-    return (
-      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-gray-800 shadow-2xl space-y-6 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-2xl mx-auto border border-emerald-500/30">
-            🔐
-          </div>
-
-          <div className="space-y-2">
-            <h1 className="text-2xl font-black text-white">Gmail Verification OTP</h1>
-            <p className="text-xs text-gray-400 font-mono">
-              Welcome, <strong className="text-emerald-400">{currentUserEmail}</strong>!
-            </p>
-          </div>
-
-          {otpError && (
-            <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-medium">
-              {otpError}
+          {loginError && (
+            <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-xs text-center font-medium">
+              {loginError}
             </div>
           )}
 
-          <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-              ✓ 6-Digit Verification OTP Code:
-            </p>
-            <p className="text-3xl font-black font-mono tracking-widest text-white py-1">
-              {generatedOtp}
-            </p>
-            <p className="text-[10px] text-emerald-300/80">
-              Enter this OTP code below to unlock Master Admin Panel.
-            </p>
-          </div>
+          {loginStep === "credentials" ? (
+            <form onSubmit={handleSendVerificationCode} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1">
+                  1. Admin Manager Gmail Address
+                </label>
+                <input
+                  type="email"
+                  value={adminGmailInput}
+                  onChange={(e) => setAdminGmailInput(e.target.value)}
+                  placeholder="ashishkushwaha1822@gmail.com"
+                  required
+                  className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                />
+              </div>
 
-          <form onSubmit={handleVerifyOtpSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-300 mb-1 text-left">
-                Enter 6-Digit OTP Code:
-              </label>
-              <input
-                type="text"
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
-                placeholder="Enter 6-digit OTP"
-                required
-                className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-lg tracking-widest font-mono focus:outline-none focus:border-emerald-500"
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1">
+                  2. Admin Password
+                </label>
+                <input
+                  type="password"
+                  value={adminPasswordInput}
+                  onChange={(e) => setAdminPasswordInput(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                />
+              </div>
 
-            <button
-              type="submit"
-              className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg transition-colors"
-            >
-              Verify OTP & Open Admin Panel →
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={isProcessing}
+                className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg transition-colors"
+              >
+                {isProcessing
+                  ? "Verifying Gmail & Password..."
+                  : "Send Gmail Verification Code →"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyCodeAndLogin} className="space-y-4">
+              <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                  ✓ Gmail Verification Code Sent to:
+                </p>
+                <p className="text-xs font-bold font-mono text-white">
+                  {adminGmailInput}
+                </p>
+                <p className="text-2xl font-black font-mono tracking-widest text-[#4ade80] text-center py-1">
+                  {generatedCode}
+                </p>
+                <p className="text-[10px] text-emerald-300/80 text-center">
+                  Enter this code below to verify your Gmail & open Admin Panel.
+                </p>
+              </div>
 
-          <div className="pt-2 flex items-center justify-center gap-2">
-            <UserButton />
-            <span className="text-xs text-gray-500">Sign in with different Gmail</span>
-          </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1">
+                  3. Enter 6-Digit Gmail Verification Code:
+                </label>
+                <input
+                  type="text"
+                  value={verificationCodeInput}
+                  onChange={(e) => setVerificationCodeInput(e.target.value)}
+                  required
+                  placeholder="Enter 6-digit code"
+                  className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isProcessing}
+                className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg transition-colors"
+              >
+                {isProcessing
+                  ? "Verifying Code..."
+                  : "Verify Code & Open Admin Panel →"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLoginStep("credentials")}
+                className="w-full text-xs text-gray-400 hover:underline pt-1 text-center block"
+              >
+                ← Change Gmail or Password
+              </button>
+            </form>
+          )}
         </div>
       </div>
     );
   }
 
-  /* SCREEN 4: AUTHENTICATED & OTP VERIFIED MASTER ADMIN DASHBOARD */
+  /* =========================================================================
+     SCREEN 2: AUTHENTICATED MASTER ADMIN DASHBOARD
+     ========================================================================= */
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col md:flex-row">
       {/* SIDEBAR NAVIGATION MENU */}
@@ -502,17 +498,22 @@ export default function AdminDashboardPage() {
                   : "text-gray-400 hover:bg-gray-800 hover:text-white"
               }`}
             >
-              <span>⚙️</span> Whitelist & System Control
+              <span>⚙️</span> Admin Whitelist & Control
             </button>
           </nav>
         </div>
 
-        <div className="pt-6 border-t border-gray-800 flex items-center justify-between">
+        <div className="pt-6 border-t border-gray-800 space-y-3">
           <div className="text-[11px] text-gray-400 min-w-0">
-            <p className="font-bold text-white truncate">{user.firstName || "Master Admin"}</p>
-            <p className="text-[10px] text-emerald-400 font-mono truncate">{currentUserEmail}</p>
+            <p className="font-bold text-white truncate">Admin Manager Active</p>
+            <p className="text-[10px] text-emerald-400 font-mono truncate">{adminGmailInput}</p>
           </div>
-          <UserButton />
+          <button
+            onClick={handleLogout}
+            className="w-full py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/20 transition-colors"
+          >
+            🔒 Logout Admin
+          </button>
         </div>
       </aside>
 
@@ -908,24 +909,24 @@ export default function AdminDashboardPage() {
           <section className="space-y-6">
             <div>
               <h2 className="text-2xl font-black text-white">
-                Admin Whitelist Management & System Control
+                Admin Manager Whitelist & System Control
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                Add new Admin Gmails with Custom Passwords & Verification Links.
+                Add new Admin Managers with Gmail + Custom Passwords & Full Admin Control.
               </p>
             </div>
 
-            {/* Add New Admin Gmail + Custom Password Form */}
+            {/* Add New Admin Manager Form */}
             <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-4">
               <h3 className="font-bold text-white text-base">
-                ➕ Add New Admin Account (Gmail + Custom Password)
+                ➕ Add New Admin Manager (Gmail + Custom Password)
               </h3>
 
               <form onSubmit={handleAddAdminAccount} className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-400 mb-1">
-                      New Admin Gmail Address:
+                      New Admin Manager Gmail Address:
                     </label>
                     <input
                       type="email"
@@ -960,7 +961,7 @@ export default function AdminDashboardPage() {
                       onChange={(e) => setAutoVerifyNewAdmin(e.target.checked)}
                       className="w-4 h-4 rounded text-[#03856b] focus:ring-0"
                     />
-                    Auto-Verify & Grant Full Admin Access Immediately
+                    Auto-Verify & Grant Full Admin Control Instantly
                   </label>
                 </div>
 
@@ -969,7 +970,7 @@ export default function AdminDashboardPage() {
                   disabled={addingAdmin}
                   className="px-6 py-2.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition-colors"
                 >
-                  {addingAdmin ? "Adding Admin..." : "Add Admin Account with Full Control →"}
+                  {addingAdmin ? "Adding Admin..." : "Add Admin Manager with Full Control →"}
                 </button>
               </form>
 
@@ -982,17 +983,17 @@ export default function AdminDashboardPage() {
                     {generatedLink}
                   </p>
                   <p className="text-[11px] text-gray-400">
-                    Send this link to the new Admin Gmail to complete verification.
+                    Send this link to the new Admin Manager to complete verification.
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Whitelisted Admins List Table */}
+            {/* Whitelisted Admin Managers List */}
             <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
               <div className="p-4 bg-gray-800/80 border-b border-gray-800">
                 <h3 className="font-bold text-white text-xs uppercase tracking-wider">
-                  Authorized Admin Accounts List ({adminWhitelist.length})
+                  Authorized Admin Managers List ({adminWhitelist.length})
                 </h3>
               </div>
 
