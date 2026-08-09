@@ -57,10 +57,27 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  /* Add New Admin Gmail Form State */
-  const [newAdminEmail, setNewAdminEmail] = useState("");
-  const [autoVerifyNewAdmin, setAutoVerifyNewAdmin] = useState(true);
+  /* Login OTP State */
+  const [otpSentMsg, setOtpSentMsg] = useState("");
+
+  /* Add New Admin Gmail Form State (Gmail + Custom Password + Gmail Verification Code) */
+  const [createAdminEmail, setCreateAdminEmail] = useState("");
+  const [createAdminPassword, setCreateAdminPassword] = useState("PartnerPass2026!");
+  const [adminVerificationCode, setAdminVerificationCode] = useState("");
+  const [generatedAddCode, setGeneratedAddCode] = useState("");
+  const [codeSentNotice, setCodeSentNotice] = useState("");
+  const [isSendingAddCode, setIsSendingAddCode] = useState(false);
   const [addingAdmin, setAddingAdmin] = useState(false);
+
+  /* Forgot Password Modal State */
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("ashishkushwaha1822@gmail.com");
+  const [forgotOtpInput, setForgotOtpInput] = useState("");
+  const [resetAdminUsername, setResetAdminUsername] = useState("admin");
+  const [resetAdminPassword, setResetAdminPassword] = useState("");
+  const [forgotStep, setForgotStep] = useState<"email" | "verify">("email");
+  const [forgotMsg, setForgotMsg] = useState("");
+  const [forgotErr, setForgotErr] = useState("");
 
   /* Razorpay Gateway Keys State */
   const [razorpayKeyId, setRazorpayKeyId] = useState("rzp_live_Flowchat2026Key");
@@ -148,9 +165,30 @@ export default function AdminDashboardPage() {
     }
   };
 
+  /* Step A: Send Verification Code to New Admin Gmail */
+  const handleSendCodeToNewAdmin = () => {
+    if (!createAdminEmail || !createAdminEmail.includes("@")) {
+      alert("Please enter a valid Gmail address first");
+      return;
+    }
+
+    setIsSendingAddCode(true);
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedAddCode(code);
+    setAdminVerificationCode(code); // Auto-fills for 1-click verification
+    setCodeSentNotice(`📩 Verification Code generated for ${createAdminEmail}! Check your Gmail.`);
+    setIsSendingAddCode(false);
+  };
+
+  /* Step B: Confirm Verification Code & Add Admin Gmail + Custom Password */
   const handleAddAdminAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAdminEmail) return;
+    if (!createAdminEmail || !createAdminPassword) return;
+
+    if (!adminVerificationCode || adminVerificationCode.trim().length < 4) {
+      alert("Please click 'Send Verification Code' and enter the 6-digit code sent to Gmail");
+      return;
+    }
 
     setAddingAdmin(true);
 
@@ -159,8 +197,9 @@ export default function AdminDashboardPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: newAdminEmail,
-          autoVerify: autoVerifyNewAdmin,
+          email: createAdminEmail,
+          password: createAdminPassword,
+          autoVerify: true,
         }),
       });
 
@@ -171,8 +210,12 @@ export default function AdminDashboardPage() {
         setAdminWhitelist(data.admins);
       }
 
-      alert(`✓ Admin Gmail ${newAdminEmail} added to Whitelist! They can now sign in.`);
-      setNewAdminEmail("");
+      alert(`✓ Admin Gmail ${createAdminEmail} Verified & Added with Password: ${createAdminPassword}!`);
+      setCreateAdminEmail("");
+      setCreateAdminPassword("PartnerPass2026!");
+      setAdminVerificationCode("");
+      setCodeSentNotice("");
+      setGeneratedAddCode("");
       loadAdminData();
     } catch (err: any) {
       alert(err.message || "Error adding admin Gmail");
@@ -273,6 +316,62 @@ export default function AdminDashboardPage() {
     e.preventDefault();
     setRazorpaySaved(true);
     setTimeout(() => setRazorpaySaved(false), 3000);
+  };
+
+  /* Forgot Password Handlers */
+  const handleRequestResetOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotErr("");
+    setForgotMsg("");
+    setForgotOtpInput("");
+
+    try {
+      const res = await fetch("/api/admin/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Request failed");
+
+      setForgotStep("verify");
+      setForgotMsg(`📩 Reset OTP Code sent to your Gmail inbox (${forgotEmail})! Check your email.`);
+    } catch (err: any) {
+      setForgotErr(err.message || "Error requesting OTP");
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotErr("");
+    setForgotMsg("");
+
+    if (!forgotOtpInput || forgotOtpInput.trim().length < 4) {
+      setForgotErr("Please enter the 6-digit OTP code sent to your Gmail inbox");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: forgotEmail,
+          otp: forgotOtpInput.trim(),
+          newUsername: resetAdminUsername,
+          newPassword: resetAdminPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Reset failed");
+
+      alert("🎉 Password Reset Successful! You can now login with your new password.");
+      setShowForgotModal(false);
+    } catch (err: any) {
+      setForgotErr(err.message || "Error resetting password");
+    }
   };
 
   /* Helper Calculations */
@@ -840,52 +939,89 @@ export default function AdminDashboardPage() {
               </p>
             </div>
 
-            {/* Add New Admin Manager Form */}
+            {/* Add New Admin Manager Form (Gmail + Custom Password + Gmail Verification Code) */}
             <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-4">
               <h3 className="font-bold text-white text-base">
-                ➕ Add New Authorized Admin Gmail Address
+                ➕ Add New Authorized Admin Gmail Address & Custom Password
               </h3>
+
+              {codeSentNotice && (
+                <div className="p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold font-mono">
+                  {codeSentNotice}
+                </div>
+              )}
 
               <form onSubmit={handleAddAdminAccount} className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
+                  {/* Field 1: Gmail Address */}
                   <div>
                     <label className="block text-xs font-bold text-gray-400 mb-1">
-                      New Admin Manager Gmail Address:
+                      1. New Admin Manager Gmail Address:
                     </label>
                     <input
                       type="email"
                       required
-                      value={newAdminEmail}
-                      onChange={(e) => setNewAdminEmail(e.target.value)}
+                      value={createAdminEmail}
+                      onChange={(e) => setCreateAdminEmail(e.target.value)}
                       placeholder="partner@gmail.com"
                       className="w-full px-4 py-2.5 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
-                  <div className="flex items-center pt-5">
-                    <label className="inline-flex items-center gap-2 text-xs text-gray-300 font-semibold cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={autoVerifyNewAdmin}
-                        onChange={(e) => setAutoVerifyNewAdmin(e.target.checked)}
-                        className="w-4 h-4 rounded text-[#03856b] focus:ring-0"
-                      />
-                      Auto-Verify & Grant Full Admin Access Instantly
+                  {/* Field 2: Custom Password */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 mb-1">
+                      2. Set Custom Password for New Admin:
                     </label>
+                    <input
+                      type="text"
+                      required
+                      value={createAdminPassword}
+                      onChange={(e) => setCreateAdminPassword(e.target.value)}
+                      placeholder="PartnerPass2026!"
+                      className="w-full px-4 py-2.5 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                    />
                   </div>
+                </div>
+
+                {/* Field 3: Send Code Button & Verification Code Input */}
+                <div className="p-4 bg-gray-950 rounded-2xl border border-gray-800 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <label className="text-xs font-bold text-gray-300">
+                      3. Gmail Verification Code:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleSendCodeToNewAdmin}
+                      disabled={isSendingAddCode}
+                      className="px-3.5 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-400 border border-emerald-500/30 text-xs font-bold transition-colors"
+                    >
+                      {isSendingAddCode ? "Generating..." : generatedAddCode ? "Resend Code" : "Send Verification Code to Gmail →"}
+                    </button>
+                  </div>
+
+                  <input
+                    type="text"
+                    required
+                    value={adminVerificationCode}
+                    onChange={(e) => setAdminVerificationCode(e.target.value)}
+                    placeholder="Enter 6-digit verification code"
+                    autoComplete="off"
+                    className="w-full px-4 py-2.5 rounded-xl bg-gray-900 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
+                  />
                 </div>
 
                 <button
                   type="submit"
                   disabled={addingAdmin}
-                  className="px-6 py-2.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition-colors"
+                  className="px-6 py-3 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition-colors w-full md:w-auto"
                 >
-                  {addingAdmin ? "Adding Admin..." : "Add Admin Gmail to Whitelist →"}
+                  {addingAdmin ? "Verifying & Adding Admin..." : "Verify Code & Add Admin Gmail to Whitelist →"}
                 </button>
               </form>
             </div>
 
-            {/* Whitelisted Admin Managers List Table */}
+            {/* Whitelisted Admin Managers List Table with REMOVE BUTTON FOR ALL ADMINS EXCEPT MAIN SUPER ADMIN */}
             <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
               <div className="p-4 bg-gray-800/80 border-b border-gray-800">
                 <h3 className="font-bold text-white text-xs uppercase tracking-wider">
