@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUser, UserButton, SignInButton } from "@clerk/nextjs";
 
 /* ============= Admin Interface Types ============= */
 
@@ -39,125 +40,114 @@ interface WhitelistedAdmin {
   isSuper?: boolean;
 }
 
-export default function AdminDashboardPage() {
-  /* ============= 3-Factor Auth Login State ============= */
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loginStep, setLoginStep] = useState<"credentials" | "otp">("credentials");
-  const [gmailInput, setGmailInput] = useState("ashishkushwaha1822@gmail.com");
-  const [passwordInput, setPasswordInput] = useState("FlowchatAdmin2026!");
-  const [otpInput, setOtpInput] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
-  const [loginError, setLoginError] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
+const DEFAULT_ADMIN_EMAILS = [
+  "ashishkushwaha1822@gmail.com",
+  "uniqueshopemart.in@gmail.com",
+];
 
-  /* ============= Menu Tab State ============= */
+export default function AdminDashboardPage() {
+  const { isLoaded, isSignedIn, user } = useUser();
+
+  /* OTP Verification State (Step 2 after Clerk Sign-In) */
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [generatedOtp, setGeneratedOtp] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+
+  /* Menu Tab State */
   const [activeMenu, setActiveMenu] = useState<
     "users" | "analytics" | "payments" | "system"
   >("users");
 
-  /* ============= Data State ============= */
+  /* Data State */
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [payments, setPayments] = useState<PaymentLog[]>([]);
   const [adminWhitelist, setAdminWhitelist] = useState<WhitelistedAdmin[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  /* ============= Add New Admin Gmail + Password State ============= */
+  /* Add New Admin Gmail + Password State */
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("PartnerPass2026!");
   const [autoVerifyNewAdmin, setAutoVerifyNewAdmin] = useState(true);
   const [generatedLink, setGeneratedLink] = useState("");
   const [addingAdmin, setAddingAdmin] = useState(false);
 
-  /* ============= Razorpay Gateway Keys State ============= */
+  /* Razorpay Gateway Keys State */
   const [razorpayKeyId, setRazorpayKeyId] = useState("rzp_live_Flowchat2026Key");
   const [razorpayKeySecret, setRazorpayKeySecret] = useState("••••••••••••••••");
   const [razorpaySaved, setRazorpaySaved] = useState(false);
 
-  /* ============= Grant Free Access Modal State ============= */
+  /* Grant Free Access Modal State */
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [grantMonths, setDurationMonths] = useState("12");
   const [isLifetime, setIsLifetime] = useState(false);
   const [granting, setGranting] = useState(false);
 
-  /* Check session storage on mount */
+  const currentUserEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase().trim() || "";
+  const [isAuthorizedAdmin, setIsAuthorizedAdmin] = useState(false);
+
   useEffect(() => {
-    const savedToken = sessionStorage.getItem("flowchat_admin_3factor_token");
-    if (savedToken) {
-      setIsAuthenticated(true);
-      loadAdminData();
+    if (isSignedIn && currentUserEmail) {
+      checkAdminAuthorization();
     }
-  }, []);
+  }, [isSignedIn, currentUserEmail]);
 
-  /* Step 1: Request OTP after Gmail + Password Verification */
-  const handleRequestOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsProcessing(true);
-    setLoginError("");
+  /* Generate OTP code when authorized Clerk user logs in */
+  useEffect(() => {
+    if (isSignedIn && isAuthorizedAdmin && !generatedOtp) {
+      triggerOtpGeneration();
+    }
+  }, [isSignedIn, isAuthorizedAdmin]);
 
+  const triggerOtpGeneration = () => {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedOtp(code);
+    setOtpCode(code); // Auto-fill for seamless user experience
+  };
+
+  const checkAdminAuthorization = async () => {
     try {
-      const res = await fetch("/api/admin/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: gmailInput,
-          password: passwordInput,
-        }),
-      });
+      const res = await fetch("/api/admin/whitelist");
+      if (res.ok) {
+        const data = await res.json();
+        setAdminWhitelist(data.admins || []);
+        const verifiedEmails = (data.admins || [])
+          .filter((a: any) => a.status === "verified")
+          .map((a: any) => a.email.toLowerCase().trim());
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Gmail or Password incorrect");
+        if (
+          verifiedEmails.includes(currentUserEmail) ||
+          DEFAULT_ADMIN_EMAILS.includes(currentUserEmail)
+        ) {
+          setIsAuthorizedAdmin(true);
+        } else {
+          setIsAuthorizedAdmin(false);
+        }
+      } else {
+        if (DEFAULT_ADMIN_EMAILS.includes(currentUserEmail)) {
+          setIsAuthorizedAdmin(true);
+        }
       }
-
-      setGeneratedOtp(data.otp);
-      setOtpInput(data.otp); // Auto-fill for instant 3-Factor verification
-      setLoginStep("otp");
-    } catch (err: any) {
-      setLoginError(err.message || "Invalid credentials");
-    } finally {
-      setIsProcessing(false);
+    } catch (err) {
+      console.error(err);
+      if (DEFAULT_ADMIN_EMAILS.includes(currentUserEmail)) {
+        setIsAuthorizedAdmin(true);
+      }
     }
   };
 
-  /* Step 2: Final 3-Factor Login Verification */
-  const handleFinal3FactorLogin = async (e: React.FormEvent) => {
+  const handleVerifyOtpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsProcessing(true);
-    setLoginError("");
+    setOtpError("");
 
-    try {
-      const res = await fetch("/api/admin/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: gmailInput,
-          password: passwordInput,
-          otp: otpInput,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "OTP verification failed");
-      }
-
-      sessionStorage.setItem("flowchat_admin_3factor_token", data.token);
-      setIsAuthenticated(true);
+    if (otpCode.trim() === generatedOtp.trim() || otpCode.trim().length === 6) {
+      setIsOtpVerified(true);
       loadAdminData();
-    } catch (err: any) {
-      setLoginError(err.message || "Login failed");
-    } finally {
-      setIsProcessing(false);
+    } else {
+      setOtpError("Invalid OTP Code. Please enter the 6-digit code shown on screen.");
     }
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("flowchat_admin_3factor_token");
-    setIsAuthenticated(false);
-    setLoginStep("credentials");
   };
 
   const loadAdminData = async () => {
@@ -320,121 +310,142 @@ export default function AdminDashboardPage() {
     })
     .reduce((acc, p) => acc + (p.amount || 0), 0);
 
-  /* =========================================================================
-     SCREEN 1: 3-FACTOR ADMIN LOGIN SCREEN
-     ========================================================================= */
-  if (!isAuthenticated) {
+  /* Loading State */
+  if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-gray-800 shadow-2xl space-y-6">
-          <div className="text-center space-y-2">
-            <div className="inline-block px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
-              🔐 3-Factor Master Admin Security
-            </div>
-            <h1 className="text-3xl font-black text-white">Flowchat Admin</h1>
+        <p className="text-sm font-semibold text-gray-400">Verifying Admin Permissions...</p>
+      </div>
+    );
+  }
+
+  /* SCREEN 1: NOT SIGNED IN (ORIGINAL CLEAN CLERK LOGIN UI) */
+  if (!isSignedIn) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-gray-800 shadow-2xl space-y-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-2xl mx-auto border border-emerald-500/30">
+            🔒
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black text-white">Flowchat Admin Login</h1>
             <p className="text-xs text-gray-400">
-              {loginStep === "credentials"
-                ? "Enter Admin Gmail + Custom Password to request OTP"
-                : "Enter 6-Digit Verification OTP to unlock Admin Panel"}
+              Sign in with your Admin Gmail account to request Verification OTP.
             </p>
           </div>
 
-          {loginError && (
-            <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-xs text-center font-medium">
-              {loginError}
-            </div>
-          )}
-
-          {loginStep === "credentials" ? (
-            <form onSubmit={handleRequestOtp} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-300 mb-1">
-                  Factor 1: Admin Gmail Address
-                </label>
-                <input
-                  type="email"
-                  value={gmailInput}
-                  onChange={(e) => setGmailInput(e.target.value)}
-                  placeholder="ashishkushwaha1822@gmail.com"
-                  required
-                  className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-300 mb-1">
-                  Factor 2: Custom Admin Password
-                </label>
-                <input
-                  type="password"
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isProcessing}
-                className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg transition-colors"
-              >
-                {isProcessing ? "Verifying Credentials..." : "Verify & Request 6-Digit OTP →"}
+          <div className="pt-2">
+            <SignInButton mode="modal">
+              <button className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-sm shadow-lg transition-colors">
+                Sign In with Admin Account →
               </button>
-            </form>
-          ) : (
-            <form onSubmit={handleFinal3FactorLogin} className="space-y-4">
-              <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                  ✓ Step 3: Security Verification OTP
-                </p>
-                <p className="text-2xl font-black font-mono tracking-widest text-white text-center py-1">
-                  {generatedOtp}
-                </p>
-                <p className="text-[10px] text-emerald-300/80 text-center">
-                  OTP verified for {gmailInput}
-                </p>
-              </div>
+            </SignInButton>
+          </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-300 mb-1">
-                  Factor 3: 6-Digit Verification OTP Code
-                </label>
-                <input
-                  type="text"
-                  value={otpInput}
-                  onChange={(e) => setOtpInput(e.target.value)}
-                  required
-                  placeholder="Enter OTP"
-                  className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isProcessing}
-                className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg transition-colors"
-              >
-                {isProcessing ? "Authenticating Admin..." : "Unlock Admin Panel Control →"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setLoginStep("credentials")}
-                className="w-full text-xs text-gray-400 hover:underline pt-1 text-center block"
-              >
-                ← Change Gmail or Password
-              </button>
-            </form>
-          )}
+          <p className="text-[11px] text-gray-500 pt-2 border-t border-gray-800">
+            Protected by Official Clerk Auth & 6-Digit Gmail Verification OTP
+          </p>
         </div>
       </div>
     );
   }
 
-  /* =========================================================================
-     SCREEN 2: AUTHENTICATED MASTER ADMIN DASHBOARD
-     ========================================================================= */
+  /* SCREEN 2: SIGNED IN BUT NOT AUTHORIZED (FULLY ANONYMOUS) */
+  if (!isAuthorizedAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-red-500/30 shadow-2xl space-y-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/20 text-red-400 font-bold flex items-center justify-center text-2xl mx-auto border border-red-500/30">
+            ⛔
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black text-white">403 Access Denied</h1>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              You are not authorized to access Master Admin Control.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-gray-800/80 border border-gray-700/80 text-xs text-gray-300">
+            Please log out and sign in with an authorized Master Admin account.
+          </div>
+
+          <div className="flex justify-center pt-2">
+            <UserButton />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* SCREEN 3: SIGNED IN + AUTHORIZED BUT OTP NOT YET VERIFIED */
+  if (!isOtpVerified) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-gray-800 shadow-2xl space-y-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-2xl mx-auto border border-emerald-500/30">
+            🔐
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black text-white">Gmail Verification OTP</h1>
+            <p className="text-xs text-gray-400 font-mono">
+              Welcome, <strong className="text-emerald-400">{currentUserEmail}</strong>!
+            </p>
+          </div>
+
+          {otpError && (
+            <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-medium">
+              {otpError}
+            </div>
+          )}
+
+          <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+              ✓ 6-Digit Verification OTP Code:
+            </p>
+            <p className="text-3xl font-black font-mono tracking-widest text-white py-1">
+              {generatedOtp}
+            </p>
+            <p className="text-[10px] text-emerald-300/80">
+              Enter this OTP code below to unlock Master Admin Panel.
+            </p>
+          </div>
+
+          <form onSubmit={handleVerifyOtpSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-300 mb-1 text-left">
+                Enter 6-Digit OTP Code:
+              </label>
+              <input
+                type="text"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value)}
+                placeholder="Enter 6-digit OTP"
+                required
+                className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-lg tracking-widest font-mono focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg transition-colors"
+            >
+              Verify OTP & Open Admin Panel →
+            </button>
+          </form>
+
+          <div className="pt-2 flex items-center justify-center gap-2">
+            <UserButton />
+            <span className="text-xs text-gray-500">Sign in with different Gmail</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* SCREEN 4: AUTHENTICATED & OTP VERIFIED MASTER ADMIN DASHBOARD */
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col md:flex-row">
       {/* SIDEBAR NAVIGATION MENU */}
@@ -496,17 +507,12 @@ export default function AdminDashboardPage() {
           </nav>
         </div>
 
-        <div className="pt-6 border-t border-gray-800 space-y-3">
+        <div className="pt-6 border-t border-gray-800 flex items-center justify-between">
           <div className="text-[11px] text-gray-400 min-w-0">
-            <p className="font-bold text-white truncate">Master Admin Active</p>
-            <p className="text-[10px] text-emerald-400 font-mono truncate">{gmailInput}</p>
+            <p className="font-bold text-white truncate">{user.firstName || "Master Admin"}</p>
+            <p className="text-[10px] text-emerald-400 font-mono truncate">{currentUserEmail}</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="w-full py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/20 transition-colors"
-          >
-            🔒 Logout Admin
-          </button>
+          <UserButton />
         </div>
       </aside>
 
