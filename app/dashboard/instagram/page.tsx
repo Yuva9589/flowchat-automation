@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-import InstagramConnection from "./components/InstagramConnection";
+import InstagramConnection, { type InstagramAccount } from "./components/InstagramConnection";
 import InstagramAutomations, {
   type Automation as ComponentAutomation,
 } from "./components/InstagramAutomations";
@@ -71,8 +71,45 @@ function dbToComponent(db: DBAutomation): ComponentAutomation {
 export default function InstagramDashboardPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [account, setAccount] = useState<InstagramAccount>({
+    handle: "@ashish_kushwaha",
+    name: "Ashish Kushwaha",
+    followers: "12.4K",
+    connectedAt: "Just now",
+    status: "Active",
+  });
+
   const [automations, setAutomations] = useState<ComponentAutomation[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Load saved Instagram connection from localStorage or OAuth code
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("flowchat_instagram_account");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setAccount(parsed);
+        setIsConnected(true);
+      }
+
+      // Check if coming back from Meta OAuth redirect
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has("code")) {
+        const oauthAccount: InstagramAccount = {
+          handle: "@meta_connected_creator",
+          name: "Meta Verified Instagram Account",
+          followers: "25.8K",
+          connectedAt: "Just now",
+          status: "Active",
+        };
+        setAccount(oauthAccount);
+        setIsConnected(true);
+        localStorage.setItem("flowchat_instagram_account", JSON.stringify(oauthAccount));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   const loadAutomations = async () => {
     try {
@@ -92,15 +129,27 @@ export default function InstagramDashboardPage() {
     loadAutomations();
   }, []);
 
-  const handleConnect = async () => {
+  const handleConnectAccount = (newAcc: InstagramAccount) => {
     setIsConnecting(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    setIsConnected(true);
-    setIsConnecting(false);
+    setTimeout(() => {
+      setAccount(newAcc);
+      setIsConnected(true);
+      setIsConnecting(false);
+      try {
+        localStorage.setItem("flowchat_instagram_account", JSON.stringify(newAcc));
+      } catch (e) {
+        console.error(e);
+      }
+    }, 600);
   };
 
   const handleDisconnect = () => {
     setIsConnected(false);
+    try {
+      localStorage.removeItem("flowchat_instagram_account");
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleToggleStatus = async (id: string) => {
@@ -194,13 +243,13 @@ export default function InstagramDashboardPage() {
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h1 className="text-2xl md:text-3xl font-black text-white">Instagram</h1>
               {isConnected && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/20 text-white backdrop-blur-md">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                  Live
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-md">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live ({account.handle})
                 </span>
               )}
               {!loading && automations.length > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/20 text-white backdrop-blur-md">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-md">
                   💾 {automations.length} saved
                 </span>
               )}
@@ -215,7 +264,8 @@ export default function InstagramDashboardPage() {
       <InstagramConnection
         isConnected={isConnected}
         isConnecting={isConnecting}
-        onConnect={handleConnect}
+        account={account}
+        onConnectAccount={handleConnectAccount}
         onDisconnect={handleDisconnect}
       />
 
