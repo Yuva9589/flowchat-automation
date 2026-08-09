@@ -8,7 +8,7 @@ export interface AdminCredential {
   isSuper?: boolean;
 }
 
-// ONLY THE MASTER OWNER GMAIL IS HARDCODED AS DEFAULT SUPER ADMIN
+// Master Super Admin Owner
 export const DEFAULT_SUPER_ADMINS: AdminCredential[] = [
   {
     email: "ashishkushwaha1822@gmail.com",
@@ -33,14 +33,19 @@ export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
 
   try {
     const supabase = createServerSupabaseClient();
-    const { data: records } = await supabase
+    const { data: records, error } = await supabase
       .from("payments")
       .select("*")
       .in("plan", ["admin_whitelisted_account", "admin_whitelisted_email"]);
 
+    if (error) {
+      console.error("Error fetching whitelist records from DB:", error);
+    }
+
     if (records && records.length > 0) {
       records.forEach((r: any) => {
         if (r.email) {
+          const cleanEmail = r.email.toLowerCase().trim();
           let password = "FlowchatAdmin2026!";
           let token = "";
 
@@ -52,18 +57,18 @@ export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
             if (tokenMatch) token = tokenMatch[1].trim();
           }
 
-          adminsMap.set(r.email.toLowerCase().trim(), {
-            email: r.email.toLowerCase().trim(),
+          adminsMap.set(cleanEmail, {
+            email: cleanEmail,
             password: password,
             status: r.status === "verified" ? "verified" : "pending",
             token: token,
-            isSuper: r.email.toLowerCase().trim() === "ashishkushwaha1822@gmail.com",
+            isSuper: cleanEmail === "ashishkushwaha1822@gmail.com",
           });
         }
       });
     }
   } catch (err) {
-    console.error("Error fetching admin credentials:", err);
+    console.error("Error in getAllAdminCredentials:", err);
   }
 
   return Array.from(adminsMap.values());
@@ -80,7 +85,7 @@ export async function getWhitelistedAdminEmails(): Promise<string[]> {
 }
 
 /**
- * Adds a new Admin Gmail to Whitelist
+ * Adds a new Admin Gmail + Custom Password to Whitelist in Supabase DB
  */
 export async function addNewAdminAccount(
   email: string,
@@ -93,7 +98,16 @@ export async function addNewAdminAccount(
 
   try {
     const supabase = createServerSupabaseClient();
-    await supabase.from("payments").insert([
+
+    // 1. Remove any old pending record for this email
+    await supabase
+      .from("payments")
+      .delete()
+      .eq("email", cleanEmail)
+      .in("plan", ["admin_whitelisted_account", "admin_whitelisted_email"]);
+
+    // 2. Insert fresh verified admin record
+    const { error } = await supabase.from("payments").insert([
       {
         user_id: "00000000-0000-0000-0000-000000000000",
         email: cleanEmail,
@@ -104,6 +118,11 @@ export async function addNewAdminAccount(
         created_at: new Date().toISOString(),
       },
     ]);
+
+    if (error) {
+      console.error("Error inserting admin record in Supabase:", error);
+      return { success: false, token: "" };
+    }
 
     return { success: true, token };
   } catch (err) {

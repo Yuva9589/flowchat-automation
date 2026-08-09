@@ -60,6 +60,7 @@ export default function AdminDashboardPage() {
   /* Add New Admin Gmail Form State */
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [autoVerifyNewAdmin, setAutoVerifyNewAdmin] = useState(true);
+  const [generatedLink, setGeneratedLink] = useState("");
   const [addingAdmin, setAddingAdmin] = useState(false);
 
   /* Razorpay Gateway Keys State */
@@ -87,8 +88,10 @@ export default function AdminDashboardPage() {
       const res = await fetch("/api/admin/whitelist");
       if (res.ok) {
         const data = await res.json();
-        setAdminWhitelist(data.admins || []);
-        const verifiedEmails = (data.admins || [])
+        const fetchedAdmins = data.admins || [];
+        setAdminWhitelist(fetchedAdmins);
+
+        const verifiedEmails = fetchedAdmins
           .filter((a: any) => a.status === "verified")
           .map((a: any) => a.email.toLowerCase().trim());
 
@@ -151,6 +154,7 @@ export default function AdminDashboardPage() {
     if (!newAdminEmail) return;
 
     setAddingAdmin(true);
+    setGeneratedLink("");
 
     try {
       const res = await fetch("/api/admin/whitelist", {
@@ -165,9 +169,17 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to add Admin Gmail");
 
-      alert(`✓ Admin Gmail ${newAdminEmail} added to Whitelist! They can now sign in.`);
+      if (data.verificationLink) {
+        setGeneratedLink(data.verificationLink);
+      }
+
+      if (data.admins) {
+        setAdminWhitelist(data.admins);
+      }
+
+      alert(`✓ Admin Gmail ${newAdminEmail} added to Whitelist with Full Admin Control!`);
       setNewAdminEmail("");
-      checkAdminAuthorization();
+      loadAdminData();
     } catch (err: any) {
       alert(err.message || "Error adding admin Gmail");
     } finally {
@@ -194,8 +206,12 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to remove Admin Gmail");
 
-      alert(`🗑️ Admin access for ${adminEmailToRemove} removed successfully!`);
-      checkAdminAuthorization();
+      if (data.admins) {
+        setAdminWhitelist(data.admins);
+      }
+
+      alert(`🗑️ Admin access for ${adminEmailToRemove} removed permanently!`);
+      loadAdminData();
     } catch (err: any) {
       alert(err.message || "Error removing admin Gmail");
     }

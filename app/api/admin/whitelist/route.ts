@@ -31,7 +31,7 @@ export async function GET() {
 
 /**
  * POST /api/admin/whitelist
- * Adds a new Admin Gmail to Whitelist
+ * Adds a new Admin Gmail to Whitelist in Supabase DB
  */
 export async function POST(req: NextRequest) {
   try {
@@ -58,10 +58,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to add Admin account" }, { status: 500 });
     }
 
+    const verificationLink = `https://earnwithads.in/admin/verify?token=${token}&email=${encodeURIComponent(
+      cleanEmail
+    )}`;
+
+    // Return updated admin list
+    const updatedAdmins = await getAllAdminCredentials();
+
     return NextResponse.json({
       success: true,
-      message: `✓ Admin Gmail ${cleanEmail} added to Whitelist!`,
+      message: autoVerify
+        ? `✓ Admin Gmail ${cleanEmail} verified and granted Full Admin Control!`
+        : `Admin Gmail added! Verification link generated for ${cleanEmail}.`,
+      verificationLink: verificationLink,
+      token: token,
       email: cleanEmail,
+      admins: updatedAdmins,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
@@ -97,20 +109,24 @@ export async function DELETE(req: NextRequest) {
 
     const supabase = createServerSupabaseClient();
 
-    // Delete from Supabase DB payments/whitelist table
+    // Delete from Supabase DB
     const { error } = await supabase
       .from("payments")
       .delete()
-      .eq("email", cleanEmail);
+      .eq("email", cleanEmail)
+      .in("plan", ["admin_whitelisted_account", "admin_whitelisted_email"]);
 
     if (error) {
       console.error("Error deleting admin email:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const updatedAdmins = await getAllAdminCredentials();
+
     return NextResponse.json({
       success: true,
       message: `✓ Admin authority for ${cleanEmail} removed permanently!`,
+      admins: updatedAdmins,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
