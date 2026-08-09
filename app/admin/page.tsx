@@ -40,11 +40,7 @@ interface WhitelistedAdmin {
   isSuper?: boolean;
 }
 
-const DEFAULT_SUPER_ADMINS = [
-  "ashishkushwaha1822@gmail.com",
-  "uniqueshopemart.in@gmail.com",
-  "mantu.ak39@gmail.com",
-];
+const DEFAULT_SUPER_ADMINS = ["ashishkushwaha1822@gmail.com"];
 
 export default function AdminDashboardPage() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -889,7 +885,7 @@ export default function AdminDashboardPage() {
               </form>
             </div>
 
-            {/* Whitelisted Admin Managers List Table */}
+            {/* Whitelisted Admin Managers List Table with REMOVE BUTTON FOR ALL ADMINS EXCEPT MAIN SUPER ADMIN */}
             <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
               <div className="p-4 bg-gray-800/80 border-b border-gray-800">
                 <h3 className="font-bold text-white text-xs uppercase tracking-wider">

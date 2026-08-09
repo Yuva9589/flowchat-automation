@@ -8,7 +8,7 @@ export interface AdminCredential {
   isSuper?: boolean;
 }
 
-// Default Hardcoded Initial Admins (Always Allowed)
+// ONLY THE SINGLE MASTER OWNER GMAIL IS HARDCODED AS DEFAULT SUPER ADMIN
 export const DEFAULT_SUPER_ADMINS: AdminCredential[] = [
   {
     email: "ashishkushwaha1822@gmail.com",
@@ -16,29 +16,17 @@ export const DEFAULT_SUPER_ADMINS: AdminCredential[] = [
     status: "verified",
     isSuper: true,
   },
-  {
-    email: "uniqueshopemart.in@gmail.com",
-    password: "FlowchatAdmin2026!",
-    status: "verified",
-    isSuper: false,
-  },
-  {
-    email: "mantu.ak39@gmail.com",
-    password: "FlowchatAdmin2026!",
-    status: "verified",
-    isSuper: false,
-  },
 ];
 
 export const DEFAULT_SUPER_ADMIN_EMAILS = DEFAULT_SUPER_ADMINS.map((a) => a.email);
 
 /**
- * Gets all Whitelisted Admin credentials directly from Supabase PostgreSQL Database + Defaults
+ * Gets all Whitelisted Admin credentials from Supabase DB + Master Defaults
  */
 export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
   const adminsMap = new Map<string, AdminCredential>();
 
-  // 1. Always add Initial Default Admins
+  // 1. Always add Master Owner Super Admin
   DEFAULT_SUPER_ADMINS.forEach((adm) => {
     adminsMap.set(adm.email.toLowerCase().trim(), adm);
   });
@@ -47,14 +35,10 @@ export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
     const supabase = createServerSupabaseClient();
 
     // 2. Query Supabase `users` table for all users with admin_whitelisted plan
-    const { data: dbUsers, error: userErr } = await supabase
+    const { data: dbUsers } = await supabase
       .from("users")
       .select("*")
       .or("plan.eq.admin_whitelisted,custom_access_granted.eq.true");
-
-    if (userErr) {
-      console.error("Error querying Supabase users table:", userErr);
-    }
 
     if (dbUsers && dbUsers.length > 0) {
       dbUsers.forEach((u: any) => {
@@ -111,7 +95,7 @@ export async function getWhitelistedAdminEmails(): Promise<string[]> {
 }
 
 /**
- * Adds a new Admin Gmail to Whitelist permanently in Supabase PostgreSQL DB!
+ * Adds a new Admin Gmail to Whitelist in Supabase PostgreSQL DB!
  */
 export async function addNewAdminAccount(
   email: string,
@@ -132,21 +116,15 @@ export async function addNewAdminAccount(
       .limit(1);
 
     if (existingUsers && existingUsers.length > 0) {
-      // Update existing user plan to 'admin_whitelisted'
-      const { error: updateErr } = await supabase
+      await supabase
         .from("users")
         .update({
           plan: "admin_whitelisted",
           custom_access_granted: true,
         })
         .eq("id", existingUsers[0].id);
-
-      if (updateErr) {
-        console.error("Error updating user in Supabase:", updateErr);
-      }
     } else {
-      // Insert new user into `users` table with plan = 'admin_whitelisted'
-      const { error: insertErr } = await supabase.from("users").insert([
+      await supabase.from("users").insert([
         {
           email: cleanEmail,
           name: cleanEmail.split("@")[0] || "Admin Manager",
@@ -156,13 +134,9 @@ export async function addNewAdminAccount(
           created_at: new Date().toISOString(),
         },
       ]);
-
-      if (insertErr) {
-        console.error("Error inserting admin user in Supabase:", insertErr);
-      }
     }
 
-    // 2. Try inserting into payments table if exists
+    // 2. Try inserting into payments table if available
     try {
       await supabase.from("payments").insert([
         {
@@ -188,22 +162,25 @@ export async function addNewAdminAccount(
 export const addAdminEmailToWhitelist = addNewAdminAccount;
 
 /**
- * Removes an Admin Gmail from Supabase PostgreSQL DB Whitelist
+ * Removes an Admin Gmail permanently from Supabase PostgreSQL DB Whitelist
  */
 export async function removeAdminAccount(email: string): Promise<boolean> {
   const cleanEmail = email.toLowerCase().trim();
 
   if (cleanEmail === "ashishkushwaha1822@gmail.com") {
-    return false; // Protect Super Admin
+    return false; // Protect Master Super Admin Owner
   }
 
   try {
     const supabase = createServerSupabaseClient();
+
+    // 1. Reset user plan in `users` table
     await supabase
       .from("users")
       .update({ plan: "free_trial", custom_access_granted: false })
       .eq("email", cleanEmail);
 
+    // 2. Delete from `payments` table
     try {
       await supabase.from("payments").delete().eq("email", cleanEmail);
     } catch (e) {
