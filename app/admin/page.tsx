@@ -885,7 +885,7 @@ export default function AdminDashboardPage() {
               </form>
             </div>
 
-            {/* Whitelisted Admin Managers List Table with REMOVE BUTTON FOR ALL ADMINS EXCEPT MAIN SUPER ADMIN */}
+            {/* Whitelisted Admin Managers List Table */}
             <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
               <div className="p-4 bg-gray-800/80 border-b border-gray-800">
                 <h3 className="font-bold text-white text-xs uppercase tracking-wider">

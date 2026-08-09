@@ -8,7 +8,7 @@ export interface AdminCredential {
   isSuper?: boolean;
 }
 
-// ONLY THE SINGLE MASTER OWNER GMAIL IS HARDCODED AS DEFAULT SUPER ADMIN
+// Master Super Admin Owner
 export const DEFAULT_SUPER_ADMINS: AdminCredential[] = [
   {
     email: "ashishkushwaha1822@gmail.com",
@@ -26,7 +26,7 @@ export const DEFAULT_SUPER_ADMIN_EMAILS = DEFAULT_SUPER_ADMINS.map((a) => a.emai
 export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
   const adminsMap = new Map<string, AdminCredential>();
 
-  // 1. Always add Master Owner Super Admin
+  // 1. Add Master Owner Super Admin
   DEFAULT_SUPER_ADMINS.forEach((adm) => {
     adminsMap.set(adm.email.toLowerCase().trim(), adm);
   });
@@ -34,7 +34,7 @@ export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
   try {
     const supabase = createServerSupabaseClient();
 
-    // 2. Query Supabase `users` table for all users with admin_whitelisted plan
+    // 2. Query `users` table for users with admin_whitelisted plan
     const { data: dbUsers } = await supabase
       .from("users")
       .select("*")
@@ -44,17 +44,19 @@ export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
       dbUsers.forEach((u: any) => {
         if (u.email) {
           const cleanEmail = u.email.toLowerCase().trim();
-          adminsMap.set(cleanEmail, {
-            email: cleanEmail,
-            password: "FlowchatAdmin2026!",
-            status: "verified",
-            isSuper: cleanEmail === "ashishkushwaha1822@gmail.com",
-          });
+          if (!adminsMap.has(cleanEmail)) {
+            adminsMap.set(cleanEmail, {
+              email: cleanEmail,
+              password: "FlowchatAdmin2026!",
+              status: "verified",
+              isSuper: cleanEmail === "ashishkushwaha1822@gmail.com",
+            });
+          }
         }
       });
     }
 
-    // 3. Query `payments` table if present
+    // 3. Query `payments` table for admin_whitelisted_account records
     try {
       const { data: records } = await supabase
         .from("payments")
@@ -65,17 +67,29 @@ export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
         records.forEach((r: any) => {
           if (r.email) {
             const cleanEmail = r.email.toLowerCase().trim();
+            let password = "FlowchatAdmin2026!";
+            let token = "";
+
+            if (r.payment_method) {
+              const passMatch = r.payment_method.match(/Pass:\s*([^|]+)/);
+              if (passMatch) password = passMatch[1].trim();
+
+              const tokenMatch = r.payment_method.match(/Token:\s*(.+)/);
+              if (tokenMatch) token = tokenMatch[1].trim();
+            }
+
             adminsMap.set(cleanEmail, {
               email: cleanEmail,
-              password: "FlowchatAdmin2026!",
+              password: password,
               status: r.status === "verified" ? "verified" : "pending",
+              token: token,
               isSuper: cleanEmail === "ashishkushwaha1822@gmail.com",
             });
           }
         });
       }
     } catch (paymentErr) {
-      // Ignore if payments table missing
+      // Optional fallback
     }
   } catch (err) {
     console.error("Error in getAllAdminCredentials:", err);
@@ -95,7 +109,7 @@ export async function getWhitelistedAdminEmails(): Promise<string[]> {
 }
 
 /**
- * Adds a new Admin Gmail to Whitelist in Supabase PostgreSQL DB!
+ * Adds a new Admin Gmail + Custom Password to Whitelist in Supabase DB
  */
 export async function addNewAdminAccount(
   email: string,
@@ -104,11 +118,12 @@ export async function addNewAdminAccount(
 ): Promise<{ success: boolean; token: string; error?: string }> {
   const cleanEmail = email.toLowerCase().trim();
   const token = `verify_admin_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
+  const methodString = `Pass: ${password} | Token: ${token}`;
 
   try {
     const supabase = createServerSupabaseClient();
 
-    // 1. Check if user already exists in `users` table
+    // 1. Update/upsert in `users` table
     const { data: existingUsers } = await supabase
       .from("users")
       .select("id")
@@ -136,14 +151,14 @@ export async function addNewAdminAccount(
       ]);
     }
 
-    // 2. Try inserting into payments table if available
+    // 2. Insert into `payments` table
     try {
       await supabase.from("payments").insert([
         {
           email: cleanEmail,
           amount: 0,
           plan: "admin_whitelisted_account",
-          payment_method: `Pass: ${password} | Token: ${token}`,
+          payment_method: methodString,
           status: verified ? "verified" : "pending",
           created_at: new Date().toISOString(),
         },
@@ -162,25 +177,25 @@ export async function addNewAdminAccount(
 export const addAdminEmailToWhitelist = addNewAdminAccount;
 
 /**
- * Removes an Admin Gmail permanently from Supabase PostgreSQL DB Whitelist
+ * Removes an Admin Gmail permanently from Supabase DB Whitelist
  */
 export async function removeAdminAccount(email: string): Promise<boolean> {
   const cleanEmail = email.toLowerCase().trim();
 
   if (cleanEmail === "ashishkushwaha1822@gmail.com") {
-    return false; // Protect Master Super Admin Owner
+    return false; // Protect Super Admin Owner
   }
 
   try {
     const supabase = createServerSupabaseClient();
 
-    // 1. Reset user plan in `users` table
+    // Reset plan in `users` table
     await supabase
       .from("users")
       .update({ plan: "free_trial", custom_access_granted: false })
       .eq("email", cleanEmail);
 
-    // 2. Delete from `payments` table
+    // Delete from `payments` table
     try {
       await supabase.from("payments").delete().eq("email", cleanEmail);
     } catch (e) {

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { currentUser, createClerkClient } from "@clerk/nextjs/server";
-import { createServerSupabaseClient } from "@/lib/supabase";
+import { currentUser } from "@clerk/nextjs/server";
 import {
   getAllAdminCredentials,
   addNewAdminAccount,
+  removeAdminAccount,
 } from "@/lib/adminWhitelist";
 
 const PROTECTED_SUPER_ADMIN = "ashishkushwaha1822@gmail.com";
@@ -31,7 +31,7 @@ export async function GET() {
 
 /**
  * POST /api/admin/whitelist
- * Creates Admin Account in Clerk & Whitelists in Supabase DB!
+ * Verifies code and Adds new Admin Gmail + Custom Password to Whitelist in Supabase DB
  */
 export async function POST(req: NextRequest) {
   try {
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { email, password = "FlowchatAdmin2026!" } = body;
+    const { email, password = "FlowchatAdmin2026!", autoVerify = true } = body;
 
     if (!email || !email.includes("@")) {
       return NextResponse.json({ error: "Invalid Gmail address" }, { status: 400 });
@@ -56,34 +56,15 @@ export async function POST(req: NextRequest) {
 
     const cleanEmail = email.toLowerCase().trim();
 
-    // 1. Create User in Clerk directly (if secret key available)
-    let clerkAccountCreated = false;
-    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-
-    if (clerkSecretKey) {
-      try {
-        const clerkClient = createClerkClient({ secretKey: clerkSecretKey });
-        await clerkClient.users.createUser({
-          emailAddress: [cleanEmail],
-          password: password,
-        });
-        clerkAccountCreated = true;
-      } catch (clerkErr: any) {
-        console.log("Clerk user creation note:", clerkErr?.message || clerkErr);
-        // If user already exists in Clerk, that's fine too!
-      }
-    }
-
-    // 2. Add to Whitelist in Supabase DB
     const { success, token, error: addErr } = await addNewAdminAccount(
       cleanEmail,
       password,
-      true
+      autoVerify
     );
 
     if (!success) {
       return NextResponse.json(
-        { error: addErr || "Failed to add Admin Gmail into Supabase DB" },
+        { error: addErr || "Failed to add Admin account" },
         { status: 500 }
       );
     }
@@ -92,10 +73,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `✓ Admin Account created for ${cleanEmail}! They can now log in with their Password.`,
+      message: `✓ Admin Gmail ${cleanEmail} verified and added with Custom Password!`,
       email: cleanEmail,
       password: password,
-      clerkCreated: clerkAccountCreated,
+      token: token,
       admins: updatedAdmins,
     });
   } catch (err: any) {
@@ -130,19 +111,7 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const supabase = createServerSupabaseClient();
-
-    // Reset user plan in users table
-    await supabase
-      .from("users")
-      .update({ plan: "free_trial", custom_access_granted: false })
-      .eq("email", cleanEmail);
-
-    try {
-      await supabase.from("payments").delete().eq("email", cleanEmail);
-    } catch (e) {
-      // Optional
-    }
+    await removeAdminAccount(cleanEmail);
 
     const updatedAdmins = await getAllAdminCredentials();
 
