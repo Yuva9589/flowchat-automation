@@ -20,7 +20,7 @@ export async function GET() {
       password: a.password || "••••••••",
       status: a.status,
       token: a.token || "",
-      isSuper: a.isSuper || false,
+      isSuper: a.email.toLowerCase().trim() === PROTECTED_SUPER_ADMIN,
     }));
 
     return NextResponse.json({ admins: formattedAdmins });
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
 
 /**
  * DELETE /api/admin/whitelist
- * Removes / Revokes an Admin Gmail from the Whitelist
+ * Permanently removes an Admin Gmail from Supabase DB Whitelist
  */
 export async function DELETE(req: NextRequest) {
   try {
@@ -90,23 +90,27 @@ export async function DELETE(req: NextRequest) {
 
     if (cleanEmail === PROTECTED_SUPER_ADMIN) {
       return NextResponse.json(
-        { error: "Cannot delete Master Super Admin account" },
+        { error: "Cannot delete Master Owner Super Admin account" },
         { status: 403 }
       );
     }
 
     const supabase = createServerSupabaseClient();
 
-    // Delete from admin whitelist records
-    await supabase
+    // Delete from Supabase DB payments/whitelist table
+    const { error } = await supabase
       .from("payments")
       .delete()
-      .eq("email", cleanEmail)
-      .in("plan", ["admin_whitelisted_account", "admin_whitelisted_email"]);
+      .eq("email", cleanEmail);
+
+    if (error) {
+      console.error("Error deleting admin email:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
-      message: `✓ Admin authority for ${cleanEmail} removed successfully!`,
+      message: `✓ Admin authority for ${cleanEmail} removed permanently!`,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });

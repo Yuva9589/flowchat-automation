@@ -40,10 +40,7 @@ interface WhitelistedAdmin {
   isSuper?: boolean;
 }
 
-const DEFAULT_SUPER_ADMINS = [
-  "ashishkushwaha1822@gmail.com",
-  "uniqueshopemart.in@gmail.com",
-];
+const DEFAULT_SUPER_ADMINS = ["ashishkushwaha1822@gmail.com"];
 
 export default function AdminDashboardPage() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -170,7 +167,7 @@ export default function AdminDashboardPage() {
 
       alert(`✓ Admin Gmail ${newAdminEmail} added to Whitelist! They can now sign in.`);
       setNewAdminEmail("");
-      loadAdminData();
+      checkAdminAuthorization();
     } catch (err: any) {
       alert(err.message || "Error adding admin Gmail");
     } finally {
@@ -198,7 +195,7 @@ export default function AdminDashboardPage() {
       if (!res.ok) throw new Error(data.error || "Failed to remove Admin Gmail");
 
       alert(`🗑️ Admin access for ${adminEmailToRemove} removed successfully!`);
-      loadAdminData();
+      checkAdminAuthorization();
     } catch (err: any) {
       alert(err.message || "Error removing admin Gmail");
     }
@@ -920,7 +917,7 @@ export default function AdminDashboardPage() {
                       {adm.email.toLowerCase() !== "ashishkushwaha1822@gmail.com" && (
                         <button
                           onClick={() => handleRemoveAdminGmail(adm.email)}
-                          className="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-[11px] border border-red-500/30 transition-colors"
+                          className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-[11px] border border-red-500/30 transition-colors"
                         >
                           🗑️ Remove Admin Access
                         </button>

@@ -8,15 +8,10 @@ export interface AdminCredential {
   isSuper?: boolean;
 }
 
+// ONLY THE MASTER OWNER GMAIL IS HARDCODED AS DEFAULT SUPER ADMIN
 export const DEFAULT_SUPER_ADMINS: AdminCredential[] = [
   {
     email: "ashishkushwaha1822@gmail.com",
-    password: "FlowchatAdmin2026!",
-    status: "verified",
-    isSuper: true,
-  },
-  {
-    email: "uniqueshopemart.in@gmail.com",
     password: "FlowchatAdmin2026!",
     status: "verified",
     isSuper: true,
@@ -26,11 +21,12 @@ export const DEFAULT_SUPER_ADMINS: AdminCredential[] = [
 export const DEFAULT_SUPER_ADMIN_EMAILS = DEFAULT_SUPER_ADMINS.map((a) => a.email);
 
 /**
- * Gets all Whitelisted Admin credentials from Supabase DB + Defaults
+ * Gets all Whitelisted Admin credentials from Supabase DB + Master Defaults
  */
 export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
   const adminsMap = new Map<string, AdminCredential>();
 
+  // Add Master Owner Super Admin
   DEFAULT_SUPER_ADMINS.forEach((adm) => {
     adminsMap.set(adm.email.toLowerCase().trim(), adm);
   });
@@ -40,7 +36,7 @@ export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
     const { data: records } = await supabase
       .from("payments")
       .select("*")
-      .eq("plan", "admin_whitelisted_account");
+      .in("plan", ["admin_whitelisted_account", "admin_whitelisted_email"]);
 
     if (records && records.length > 0) {
       records.forEach((r: any) => {
@@ -61,7 +57,7 @@ export async function getAllAdminCredentials(): Promise<AdminCredential[]> {
             password: password,
             status: r.status === "verified" ? "verified" : "pending",
             token: token,
-            isSuper: false,
+            isSuper: r.email.toLowerCase().trim() === "ashishkushwaha1822@gmail.com",
           });
         }
       });
@@ -84,7 +80,7 @@ export async function getWhitelistedAdminEmails(): Promise<string[]> {
 }
 
 /**
- * Adds a new Admin Gmail + Custom Password to Whitelist
+ * Adds a new Admin Gmail to Whitelist
  */
 export async function addNewAdminAccount(
   email: string,
