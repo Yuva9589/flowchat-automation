@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
-import { createServerSupabaseClient } from "@/lib/supabase";
 import {
   getAllAdminCredentials,
   addNewAdminAccount,
+  removeAdminAccount,
 } from "@/lib/adminWhitelist";
 
 const PROTECTED_SUPER_ADMIN = "ashishkushwaha1822@gmail.com";
@@ -31,7 +31,7 @@ export async function GET() {
 
 /**
  * POST /api/admin/whitelist
- * Adds a new Admin Gmail directly into Supabase `users` table!
+ * Adds a new Admin Gmail to Whitelist
  */
 export async function POST(req: NextRequest) {
   try {
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     if (!success) {
       return NextResponse.json(
-        { error: addErr || "Failed to add Admin Gmail into Supabase DB" },
+        { error: addErr || "Failed to add Admin Gmail" },
         { status: 500 }
       );
     }
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
 
 /**
  * DELETE /api/admin/whitelist
- * Removes Admin Gmail authority from Supabase `users` table directly!
+ * Removes an Admin Gmail from Whitelist
  */
 export async function DELETE(req: NextRequest) {
   try {
@@ -110,20 +110,7 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const supabase = createServerSupabaseClient();
-
-    // 1. Reset user plan in `users` table
-    await supabase
-      .from("users")
-      .update({ plan: "free_trial", custom_access_granted: false })
-      .eq("email", cleanEmail);
-
-    // 2. Try deleting from payments table if present
-    try {
-      await supabase.from("payments").delete().eq("email", cleanEmail);
-    } catch (e) {
-      // Optional fallback
-    }
+    await removeAdminAccount(cleanEmail);
 
     const updatedAdmins = await getAllAdminCredentials();
 
