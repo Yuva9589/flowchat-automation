@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { createServerSupabaseClient } from "@/lib/supabase";
-
-const ADMIN_EMAILS = [
-  "ashishkushwaha1822@gmail.com",
-  "uniqueshopemart.in@gmail.com",
-  process.env.ADMIN_EMAIL?.toLowerCase().trim() || "",
-].filter(Boolean);
+import { getWhitelistedAdminEmails } from "@/lib/adminWhitelist";
 
 /**
  * GET /api/admin/users
  * Returns list of all registered users with their subscription status & stats
- * Protected: Master Admin Only
+ * Protected: Whitelisted Master Admins Only
  */
 export async function GET(req: NextRequest) {
   try {
@@ -21,9 +16,9 @@ export async function GET(req: NextRequest) {
     }
 
     const userEmail = clerkUser.emailAddresses[0]?.emailAddress?.toLowerCase().trim();
-    const isAdmin = ADMIN_EMAILS.some((email) => email === userEmail);
+    const authorizedEmails = await getWhitelistedAdminEmails();
 
-    if (!isAdmin) {
+    if (!authorizedEmails.includes(userEmail)) {
       return NextResponse.json(
         { error: "Forbidden: Master Admin Access Only" },
         { status: 403 }

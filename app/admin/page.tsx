@@ -32,44 +32,97 @@ interface PaymentLog {
   created_at: string;
 }
 
-const ADMIN_EMAILS = [
-  "ashishkushwaha1822@gmail.com",
-  "uniqueshopemart.in@gmail.com",
-];
+interface WhitelistedAdmin {
+  email: string;
+  status: string;
+  token: string;
+  isSuper?: boolean;
+}
 
 export default function AdminDashboardPage() {
   const { isLoaded, isSignedIn, user } = useUser();
 
-  /* ============= Menu Tab State ============= */
+  /* Menu Tab State */
   const [activeMenu, setActiveMenu] = useState<
     "users" | "analytics" | "payments" | "system"
   >("users");
 
-  /* ============= Data State ============= */
+  /* Data State */
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [payments, setPayments] = useState<PaymentLog[]>([]);
+  const [adminWhitelist, setAdminWhitelist] = useState<WhitelistedAdmin[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  /* ============= Razorpay Gateway Keys State ============= */
+  /* Add Admin Gmail Form State */
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [autoVerifyNewAdmin, setAutoVerifyNewAdmin] = useState(true);
+  const [generatedLink, setGeneratedLink] = useState("");
+  const [addingAdmin, setAddingAdmin] = useState(false);
+
+  /* Razorpay Gateway Keys State */
   const [razorpayKeyId, setRazorpayKeyId] = useState("rzp_live_Flowchat2026Key");
   const [razorpayKeySecret, setRazorpayKeySecret] = useState("••••••••••••••••");
   const [razorpaySaved, setRazorpaySaved] = useState(false);
 
-  /* ============= Grant Free Access Modal State ============= */
+  /* Grant Free Access Modal State */
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [grantMonths, setDurationMonths] = useState("12");
   const [isLifetime, setIsLifetime] = useState(false);
   const [granting, setGranting] = useState(false);
 
   const currentUserEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase().trim() || "";
-  const isMasterAdmin = ADMIN_EMAILS.includes(currentUserEmail);
+
+  // Check if current logged in email is authorized
+  const [isAuthorizedAdmin, setIsAuthorizedAdmin] = useState(false);
 
   useEffect(() => {
-    if (isSignedIn && isMasterAdmin) {
-      loadAdminData();
+    if (isSignedIn && currentUserEmail) {
+      checkAdminAuthorization();
     }
-  }, [isSignedIn, isMasterAdmin]);
+  }, [isSignedIn, currentUserEmail]);
+
+  const checkAdminAuthorization = async () => {
+    try {
+      const res = await fetch("/api/admin/whitelist");
+      if (res.ok) {
+        const data = await res.json();
+        setAdminWhitelist(data.admins || []);
+        const verifiedEmails = (data.admins || [])
+          .filter((a: any) => a.status === "verified")
+          .map((a: any) => a.email.toLowerCase().trim());
+
+        if (
+          verifiedEmails.includes(currentUserEmail) ||
+          currentUserEmail === "ashishkushwaha1822@gmail.com" ||
+          currentUserEmail === "uniqueshopemart.in@gmail.com"
+        ) {
+          setIsAuthorizedAdmin(true);
+          loadAdminData();
+        } else {
+          setIsAuthorizedAdmin(false);
+        }
+      } else {
+        // Fallback for default super admins
+        if (
+          currentUserEmail === "ashishkushwaha1822@gmail.com" ||
+          currentUserEmail === "uniqueshopemart.in@gmail.com"
+        ) {
+          setIsAuthorizedAdmin(true);
+          loadAdminData();
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      if (
+        currentUserEmail === "ashishkushwaha1822@gmail.com" ||
+        currentUserEmail === "uniqueshopemart.in@gmail.com"
+      ) {
+        setIsAuthorizedAdmin(true);
+        loadAdminData();
+      }
+    }
+  };
 
   const loadAdminData = async () => {
     setLoading(true);
@@ -92,6 +145,40 @@ export default function AdminDashboardPage() {
       console.error("Admin data load error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddAdminGmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAdminEmail) return;
+
+    setAddingAdmin(true);
+    setGeneratedLink("");
+
+    try {
+      const res = await fetch("/api/admin/whitelist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: newAdminEmail,
+          autoVerify: autoVerifyNewAdmin,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to add admin Gmail");
+
+      if (data.verificationLink) {
+        setGeneratedLink(data.verificationLink);
+      }
+
+      alert(`✓ Admin Gmail ${newAdminEmail} added successfully!`);
+      setNewAdminEmail("");
+      checkAdminAuthorization();
+    } catch (err: any) {
+      alert(err.message || "Error adding admin Gmail");
+    } finally {
+      setAddingAdmin(false);
     }
   };
 
@@ -210,7 +297,7 @@ export default function AdminDashboardPage() {
           <div className="space-y-2">
             <h1 className="text-2xl font-black text-white">Master Admin Control</h1>
             <p className="text-xs text-gray-400">
-              Sign in with your authorized Master Admin account to unlock full control.
+              Sign in with an authorized Master Admin account to unlock full control.
             </p>
           </div>
 
@@ -226,8 +313,8 @@ export default function AdminDashboardPage() {
     );
   }
 
-  /* SCREEN 2: SIGNED IN BUT NOT MASTER ADMIN (FULLY ANONYMOUS & HIDDEN GMAIL) */
-  if (!isMasterAdmin) {
+  /* SCREEN 2: SIGNED IN BUT NOT AUTHORIZED (FULLY ANONYMOUS) */
+  if (!isAuthorizedAdmin) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-red-500/30 shadow-2xl space-y-6 text-center">
@@ -311,7 +398,7 @@ export default function AdminDashboardPage() {
                   : "text-gray-400 hover:bg-gray-800 hover:text-white"
               }`}
             >
-              <span>⚙️</span> Webhook & System Status
+              <span>⚙️</span> Whitelist & System Status
             </button>
           </nav>
         </div>
@@ -391,7 +478,6 @@ export default function AdminDashboardPage() {
                 </p>
               </div>
 
-              {/* Search Bar */}
               <input
                 type="text"
                 placeholder="Search by Gmail or Name..."
@@ -713,19 +799,121 @@ export default function AdminDashboardPage() {
           </section>
         )}
 
-        {/* MENU 4: WEBHOOK & SYSTEM STATUS */}
+        {/* MENU 4: WHITELIST & SYSTEM CONTROL */}
         {activeMenu === "system" && (
           <section className="space-y-6">
             <div>
               <h2 className="text-2xl font-black text-white">
-                Meta Webhook & System Status
+                Admin Whitelist Management & System Control
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                Check Meta Graph API Webhook endpoint & database connections.
+                Add new Admin Gmails with Email Verification Links & check Meta Webhook.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            {/* Add New Admin Gmail Form */}
+            <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-4">
+              <h3 className="font-bold text-white text-base">
+                ➕ Add New Authorized Admin Gmail
+              </h3>
+
+              <form onSubmit={handleAddAdminGmail} className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 mb-1">
+                      New Admin Gmail Address:
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={newAdminEmail}
+                      onChange={(e) => setNewAdminEmail(e.target.value)}
+                      placeholder="partner@gmail.com"
+                      className="w-full px-4 py-2.5 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center pt-5">
+                    <label className="inline-flex items-center gap-2 text-xs text-gray-300 font-semibold cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={autoVerifyNewAdmin}
+                        onChange={(e) => setAutoVerifyNewAdmin(e.target.checked)}
+                        className="w-4 h-4 rounded text-[#03856b] focus:ring-0"
+                      />
+                      Auto-Verify & Grant Admin Access Instantly
+                    </label>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={addingAdmin}
+                  className="px-6 py-2.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition-colors"
+                >
+                  {addingAdmin ? "Adding..." : "Add Admin Gmail →"}
+                </button>
+              </form>
+
+              {generatedLink && (
+                <div className="p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 space-y-2">
+                  <p className="text-xs font-bold uppercase">
+                    🔗 Admin Verification Link Generated:
+                  </p>
+                  <p className="text-xs font-mono bg-gray-950 p-2.5 rounded-lg border border-gray-800 select-all break-all text-white">
+                    {generatedLink}
+                  </p>
+                  <p className="text-[11px] text-gray-400">
+                    Send this link to the new Admin Gmail to complete verification.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Whitelisted Admins List */}
+            <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
+              <div className="p-4 bg-gray-800/80 border-b border-gray-800">
+                <h3 className="font-bold text-white text-xs uppercase tracking-wider">
+                  Authorized Admin Gmail List ({adminWhitelist.length})
+                </h3>
+              </div>
+
+              <div className="divide-y divide-gray-800/60">
+                {adminWhitelist.map((adm, i) => (
+                  <div
+                    key={i}
+                    className="p-4 flex items-center justify-between gap-4 hover:bg-gray-800/40"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">📧</span>
+                      <div>
+                        <p className="text-xs font-mono font-bold text-white">
+                          {adm.email}
+                        </p>
+                        <p className="text-[10px] text-gray-500">
+                          {adm.isSuper ? "Master Super Admin" : "Authorized Admin"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      {adm.status === "verified" ? (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          ✓ Verified & Active
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                          ⏳ Pending Verification
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Meta Webhook & Supabase Check */}
+            <div className="grid md:grid-cols-2 gap-6 pt-4">
               <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-3">
                 <h3 className="font-bold text-white text-base">
                   🔗 Meta Webhook Endpoint
