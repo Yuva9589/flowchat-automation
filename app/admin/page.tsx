@@ -43,6 +43,7 @@ interface WhitelistedAdmin {
 const DEFAULT_SUPER_ADMINS = [
   "ashishkushwaha1822@gmail.com",
   "uniqueshopemart.in@gmail.com",
+  "mantu.ak39@gmail.com",
 ];
 
 export default function AdminDashboardPage() {
@@ -60,12 +61,10 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  /* Add New Admin Gmail + Password State */
+  /* Add New Admin Gmail Form State */
   const [newAdminEmail, setNewAdminEmail] = useState("");
-  const [newAdminPassword, setNewAdminPassword] = useState("AdminPass2026!");
   const [autoVerifyNewAdmin, setAutoVerifyNewAdmin] = useState(true);
   const [addingAdmin, setAddingAdmin] = useState(false);
-  const [createdAdminNotice, setCreatedAdminNotice] = useState("");
 
   /* Razorpay Gateway Keys State */
   const [razorpayKeyId, setRazorpayKeyId] = useState("rzp_live_Flowchat2026Key");
@@ -155,10 +154,9 @@ export default function AdminDashboardPage() {
 
   const handleAddAdminAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAdminEmail || !newAdminPassword) return;
+    if (!newAdminEmail) return;
 
     setAddingAdmin(true);
-    setCreatedAdminNotice("");
 
     try {
       const res = await fetch("/api/admin/whitelist", {
@@ -166,26 +164,22 @@ export default function AdminDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: newAdminEmail,
-          password: newAdminPassword,
           autoVerify: autoVerifyNewAdmin,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create Admin Account");
+      if (!res.ok) throw new Error(data.error || "Failed to add Admin Gmail");
 
       if (data.admins) {
         setAdminWhitelist(data.admins);
       }
 
-      setCreatedAdminNotice(
-        `✓ Admin Account Created & Verified for ${newAdminEmail}! They can now log in using Password: ${newAdminPassword}`
-      );
+      alert(`✓ Admin Gmail ${newAdminEmail} added to Whitelist! They can now sign in.`);
       setNewAdminEmail("");
-      setNewAdminPassword("AdminPass2026!");
       loadAdminData();
     } catch (err: any) {
-      alert(err.message || "Error creating admin account");
+      alert(err.message || "Error adding admin Gmail");
     } finally {
       setAddingAdmin(false);
     }
@@ -324,7 +318,7 @@ export default function AdminDashboardPage() {
     );
   }
 
-  /* SCREEN 1: NOT SIGNED IN — OFFICIAL CLERK SIGN-IN CARD WITH BOTH SIGN-IN AND SIGN-UP */
+  /* SCREEN 1: NOT SIGNED IN — EXACT SAME SLEEK CLERK AUTH UI AS SIGN-UP PAGE */
   if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-6">
@@ -846,21 +840,15 @@ export default function AdminDashboardPage() {
                 Admin Manager Whitelist & System Control
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                Create new Admin Manager accounts with Gmail & Custom Passwords.
+                Add or Remove Admin Manager Gmails. Only whitelisted Gmails can access Admin Panel.
               </p>
             </div>
 
-            {/* Create Admin Account in Clerk & Supabase Form */}
+            {/* Add New Admin Manager Form */}
             <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-4">
               <h3 className="font-bold text-white text-base">
-                ➕ Create & Whitelist New Admin Account
+                ➕ Add New Authorized Admin Gmail Address
               </h3>
-
-              {createdAdminNotice && (
-                <div className="p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold font-mono">
-                  {createdAdminNotice}
-                </div>
-              )}
 
               <form onSubmit={handleAddAdminAccount} className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
@@ -878,31 +866,17 @@ export default function AdminDashboardPage() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 mb-1">
-                      Set Password for New Admin:
+                  <div className="flex items-center pt-5">
+                    <label className="inline-flex items-center gap-2 text-xs text-gray-300 font-semibold cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={autoVerifyNewAdmin}
+                        onChange={(e) => setAutoVerifyNewAdmin(e.target.checked)}
+                        className="w-4 h-4 rounded text-[#03856b] focus:ring-0"
+                      />
+                      Auto-Verify & Grant Full Admin Access Instantly
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={newAdminPassword}
-                      onChange={(e) => setNewAdminPassword(e.target.value)}
-                      placeholder="AdminPass2026!"
-                      className="w-full px-4 py-2.5 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-                    />
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <label className="inline-flex items-center gap-2 text-xs text-gray-300 font-semibold cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={autoVerifyNewAdmin}
-                      onChange={(e) => setAutoVerifyNewAdmin(e.target.checked)}
-                      className="w-4 h-4 rounded text-[#03856b] focus:ring-0"
-                    />
-                    Pre-Register Account & Grant Full Admin Control Instantly
-                  </label>
                 </div>
 
                 <button
@@ -910,7 +884,7 @@ export default function AdminDashboardPage() {
                   disabled={addingAdmin}
                   className="px-6 py-2.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition-colors"
                 >
-                  {addingAdmin ? "Creating Admin Account..." : "Create Admin Account & Whitelist →"}
+                  {addingAdmin ? "Adding Admin..." : "Add Admin Gmail to Whitelist →"}
                 </button>
               </form>
             </div>
