@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUser, UserButton, SignIn } from "@clerk/nextjs";
 
-/* ============= Admin Manager Interface Types ============= */
+/* ============= Admin Interface Types ============= */
 
 interface AdminUser {
   id: string;
@@ -33,145 +34,88 @@ interface PaymentLog {
 
 interface WhitelistedAdmin {
   email: string;
-  password?: string;
   status: string;
   token: string;
   isSuper?: boolean;
 }
 
+const DEFAULT_SUPER_ADMINS = [
+  "ashishkushwaha1822@gmail.com",
+  "uniqueshopemart.in@gmail.com",
+];
+
 export default function AdminDashboardPage() {
-  /* ============= Admin Login Form State ============= */
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [adminGmailInput, setAdminGmailInput] = useState("ashishkushwaha1822@gmail.com");
-  const [adminPasswordInput, setAdminPasswordInput] = useState("FlowchatAdmin2026!");
-  const [otpInput, setOtpInput] = useState("");
-  const [otpSentMsg, setOtpSentMsg] = useState("");
-  const [loginError, setLoginError] = useState("");
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const { isLoaded, isSignedIn, user } = useUser();
 
-  /* ============= Forgot Password Modal State ============= */
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState("ashishkushwaha1822@gmail.com");
-  const [forgotOtp, setForgotOtp] = useState("");
-  const [resetAdminUsername, setResetAdminUsername] = useState("admin");
-  const [resetAdminPassword, setResetAdminPassword] = useState("");
-  const [forgotStep, setForgotStep] = useState<"email" | "verify">("email");
-  const [forgotMsg, setForgotMsg] = useState("");
-  const [forgotErr, setForgotErr] = useState("");
-
-  /* ============= Menu Tab State ============= */
+  /* Menu Tab State */
   const [activeMenu, setActiveMenu] = useState<
     "users" | "analytics" | "payments" | "system"
   >("users");
 
-  /* ============= Data State ============= */
+  /* Data State */
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [payments, setPayments] = useState<PaymentLog[]>([]);
   const [adminWhitelist, setAdminWhitelist] = useState<WhitelistedAdmin[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  /* ============= Add New Admin Manager State ============= */
-  const [createAdminEmail, setCreateAdminEmail] = useState("");
-  const [createAdminPassword, setCreateAdminPassword] = useState("PartnerPass2026!");
+  /* Add New Admin Gmail Form State */
+  const [newAdminEmail, setNewAdminEmail] = useState("");
   const [autoVerifyNewAdmin, setAutoVerifyNewAdmin] = useState(true);
-  const [generatedLink, setGeneratedLink] = useState("");
   const [addingAdmin, setAddingAdmin] = useState(false);
 
-  /* ============= Razorpay Gateway Keys State ============= */
+  /* Razorpay Gateway Keys State */
   const [razorpayKeyId, setRazorpayKeyId] = useState("rzp_live_Flowchat2026Key");
   const [razorpayKeySecret, setRazorpayKeySecret] = useState("••••••••••••••••");
   const [razorpaySaved, setRazorpaySaved] = useState(false);
 
-  /* ============= Grant Free Access Modal State ============= */
+  /* Grant Free Access Modal State */
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [grantMonths, setDurationMonths] = useState("12");
   const [isLifetime, setIsLifetime] = useState(false);
   const [granting, setGranting] = useState(false);
 
-  /* Check session storage on mount */
+  const currentUserEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase().trim() || "";
+  const [isAuthorizedAdmin, setIsAuthorizedAdmin] = useState(false);
+
   useEffect(() => {
-    const savedToken = sessionStorage.getItem("flowchat_admin_session_token");
-    if (savedToken) {
-      setIsAuthenticated(true);
-      loadAdminData();
+    if (isSignedIn && currentUserEmail) {
+      checkAdminAuthorization();
     }
-  }, []);
+  }, [isSignedIn, currentUserEmail]);
 
-  /* Action 1: Click "Send OTP to Gmail" button on Login Card */
-  const handleSendOtpToGmail = async () => {
-    setIsSendingOtp(true);
-    setLoginError("");
-    setOtpSentMsg("");
-    setOtpInput(""); // Ensure field is empty for user to type OTP
-
+  const checkAdminAuthorization = async () => {
     try {
-      const res = await fetch("/api/admin/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: adminGmailInput,
-          password: adminPasswordInput,
-        }),
-      });
+      const res = await fetch("/api/admin/whitelist");
+      if (res.ok) {
+        const data = await res.json();
+        setAdminWhitelist(data.admins || []);
+        const verifiedEmails = (data.admins || [])
+          .filter((a: any) => a.status === "verified")
+          .map((a: any) => a.email.toLowerCase().trim());
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Invalid Admin Gmail or Password");
+        if (
+          verifiedEmails.includes(currentUserEmail) ||
+          DEFAULT_SUPER_ADMINS.includes(currentUserEmail)
+        ) {
+          setIsAuthorizedAdmin(true);
+          loadAdminData();
+        } else {
+          setIsAuthorizedAdmin(false);
+        }
+      } else {
+        if (DEFAULT_SUPER_ADMINS.includes(currentUserEmail)) {
+          setIsAuthorizedAdmin(true);
+          loadAdminData();
+        }
       }
-
-      setOtpSentMsg(`📩 OTP Code sent to your Gmail inbox (${adminGmailInput})! Check your email.`);
-    } catch (err: any) {
-      setLoginError(err.message || "Invalid Gmail or Password");
-    } finally {
-      setIsSendingOtp(false);
-    }
-  };
-
-  /* Action 2: Click "Verify OTP & Unlock Admin Panel" button */
-  const handleAdminLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoggingIn(true);
-    setLoginError("");
-
-    if (!otpInput || otpInput.trim().length < 4) {
-      setLoginError("Please enter the 6-digit OTP code sent to your Gmail inbox");
-      setIsLoggingIn(false);
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/admin/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: adminGmailInput,
-          password: adminPasswordInput,
-          otp: otpInput.trim(),
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Login failed");
+    } catch (err) {
+      console.error(err);
+      if (DEFAULT_SUPER_ADMINS.includes(currentUserEmail)) {
+        setIsAuthorizedAdmin(true);
+        loadAdminData();
       }
-
-      sessionStorage.setItem("flowchat_admin_session_token", data.token);
-      setIsAuthenticated(true);
-      loadAdminData();
-    } catch (err: any) {
-      setLoginError(err.message || "Invalid Gmail, Password, or OTP Code");
-    } finally {
-      setIsLoggingIn(false);
     }
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("flowchat_admin_session_token");
-    setIsAuthenticated(false);
   };
 
   const loadAdminData = async () => {
@@ -204,94 +148,30 @@ export default function AdminDashboardPage() {
     }
   };
 
-  /* Forgot Password Handlers */
-  const handleRequestOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotErr("");
-    setForgotMsg("");
-    setForgotOtp(""); // Ensure OTP input is empty for typing
-
-    try {
-      const res = await fetch("/api/admin/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Request failed");
-
-      setForgotStep("verify");
-      setForgotMsg(`📩 Reset OTP Code sent to your Gmail inbox (${forgotEmail})! Check your email.`);
-    } catch (err: any) {
-      setForgotErr(err.message || "Error requesting OTP");
-    }
-  };
-
-  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotErr("");
-    setForgotMsg("");
-
-    if (!forgotOtp || forgotOtp.trim().length < 4) {
-      setForgotErr("Please enter the 6-digit OTP code sent to your Gmail inbox");
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/admin/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: forgotEmail,
-          otp: forgotOtp.trim(),
-          newUsername: resetAdminUsername,
-          newPassword: resetAdminPassword,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Reset failed");
-
-      alert("🎉 Password Reset Successful! You can now login with your new password.");
-      setShowForgotModal(false);
-      setAdminPasswordInput(resetAdminPassword);
-    } catch (err: any) {
-      setForgotErr(err.message || "Error resetting password");
-    }
-  };
-
   const handleAddAdminAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!createAdminEmail || !createAdminPassword) return;
+    if (!newAdminEmail) return;
 
     setAddingAdmin(true);
-    setGeneratedLink("");
 
     try {
       const res = await fetch("/api/admin/whitelist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: createAdminEmail,
-          password: createAdminPassword,
+          email: newAdminEmail,
           autoVerify: autoVerifyNewAdmin,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to add Admin Manager");
+      if (!res.ok) throw new Error(data.error || "Failed to add Admin Gmail");
 
-      if (data.verificationLink) {
-        setGeneratedLink(data.verificationLink);
-      }
-
-      alert(`✓ Admin Manager ${createAdminEmail} added with Custom Password!`);
-      setCreateAdminEmail("");
-      setCreateAdminPassword("PartnerPass2026!");
+      alert(`✓ Admin Gmail ${newAdminEmail} added to Whitelist! They can now sign in.`);
+      setNewAdminEmail("");
       loadAdminData();
     } catch (err: any) {
-      alert(err.message || "Error adding admin manager");
+      alert(err.message || "Error adding admin Gmail");
     } finally {
       setAddingAdmin(false);
     }
@@ -391,235 +271,72 @@ export default function AdminDashboardPage() {
     })
     .reduce((acc, p) => acc + (p.amount || 0), 0);
 
-  /* =========================================================================
-     SCREEN 1: SECURE 100% PROTECTED ADMIN LOGIN CARD
-     (GMAIL + PASSWORD + SEND OTP + OTP CODE INPUT + FORGOT PASSWORD)
-     ========================================================================= */
-  if (!isAuthenticated) {
+  /* Loading State */
+  if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-gray-800 shadow-2xl space-y-6">
-          <div className="text-center space-y-2">
-            <div className="inline-block px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
-              👑 Master Admin Control
-            </div>
-            <h1 className="text-3xl font-black text-white">Flowchat Admin</h1>
-            <p className="text-xs text-gray-400">
-              Enter Admin Gmail, Password, and Gmail OTP Code to unlock panel.
-            </p>
-          </div>
-
-          {loginError && (
-            <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-xs text-center font-medium">
-              {loginError}
-            </div>
-          )}
-
-          {otpSentMsg && (
-            <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-center space-y-1">
-              <p className="text-xs font-bold text-emerald-400">{otpSentMsg}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleAdminLoginSubmit} className="space-y-4">
-            {/* Input 1: Admin Gmail */}
-            <div>
-              <label className="block text-xs font-bold text-gray-300 mb-1">
-                Admin Manager Gmail Address
-              </label>
-              <input
-                type="email"
-                value={adminGmailInput}
-                onChange={(e) => setAdminGmailInput(e.target.value)}
-                placeholder="ashishkushwaha1822@gmail.com"
-                required
-                className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            {/* Input 2: Admin Password + Forgot Password Link */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-bold text-gray-300">
-                  Admin Password
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForgotModal(true);
-                    setForgotStep("email");
-                    setForgotErr("");
-                    setForgotMsg("");
-                    setForgotOtp("");
-                  }}
-                  className="text-xs text-emerald-400 font-semibold hover:underline"
-                >
-                  Forgot Password?
-                </button>
-              </div>
-              <input
-                type="password"
-                value={adminPasswordInput}
-                onChange={(e) => setAdminPasswordInput(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            {/* Input 3: Gmail Verification OTP + Send OTP Button */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-gray-300">
-                  Gmail Verification OTP Code
-                </label>
-                <button
-                  type="button"
-                  onClick={handleSendOtpToGmail}
-                  disabled={isSendingOtp}
-                  className="px-3 py-1 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold transition-colors"
-                >
-                  {isSendingOtp ? "Sending..." : "Send OTP to Gmail →"}
-                </button>
-              </div>
-
-              <input
-                type="text"
-                value={otpInput}
-                onChange={(e) => setOtpInput(e.target.value)}
-                placeholder="Enter 6-digit OTP code from Gmail"
-                required
-                autoComplete="off"
-                className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoggingIn}
-              className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg transition-colors pt-3"
-            >
-              {isLoggingIn ? "Verifying Credentials..." : "Verify OTP & Unlock Admin Panel →"}
-            </button>
-          </form>
-
-          <div className="pt-3 border-t border-gray-800 text-center text-[11px] text-gray-500">
-            Domain: <strong>earnwithads.in</strong> | Flowchat Master Admin
-          </div>
-        </div>
-
-        {/* FORGOT PASSWORD MODAL */}
-        {showForgotModal && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-gray-900 rounded-3xl max-w-md w-full p-6 md:p-8 border border-gray-800 shadow-2xl space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-black text-white">🔐 Reset Admin Password</h3>
-                <button
-                  onClick={() => setShowForgotModal(false)}
-                  className="text-gray-400 hover:text-white font-bold text-lg"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {forgotErr && (
-                <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-semibold">
-                  {forgotErr}
-                </div>
-              )}
-
-              {forgotMsg && (
-                <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 space-y-1">
-                  <p className="text-xs font-bold text-emerald-400">{forgotMsg}</p>
-                </div>
-              )}
-
-              {forgotStep === "email" ? (
-                <form onSubmit={handleRequestOtp} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      Enter Admin Personal Gmail Address:
-                    </label>
-                    <input
-                      type="email"
-                      value={forgotEmail}
-                      onChange={(e) => setForgotEmail(e.target.value)}
-                      required
-                      placeholder="ashishkushwaha1822@gmail.com"
-                      className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
-                  >
-                    Send Reset OTP to Gmail →
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      Reset OTP Code from Gmail:
-                    </label>
-                    <input
-                      type="text"
-                      value={forgotOtp}
-                      onChange={(e) => setForgotOtp(e.target.value)}
-                      placeholder="Enter 6-digit OTP code from Gmail"
-                      required
-                      autoComplete="off"
-                      className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      New Custom Admin Username / Gmail:
-                    </label>
-                    <input
-                      type="text"
-                      value={resetAdminUsername}
-                      onChange={(e) => setResetAdminUsername(e.target.value)}
-                      required
-                      placeholder="admin or ashishkushwaha1822@gmail.com"
-                      className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      New Custom Password:
-                    </label>
-                    <input
-                      type="password"
-                      value={resetAdminPassword}
-                      onChange={(e) => setResetAdminPassword(e.target.value)}
-                      required
-                      placeholder="Enter new custom password"
-                      className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
-                  >
-                    Save & Activate New Password →
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        )}
+        <p className="text-sm font-semibold text-gray-400">Verifying Admin Permissions...</p>
       </div>
     );
   }
 
-  /* =========================================================================
-     SCREEN 2: AUTHENTICATED MASTER ADMIN DASHBOARD
-     ========================================================================= */
+  /* SCREEN 1: NOT SIGNED IN — EXACT SAME SLEEK CLERK AUTH UI AS SIGN-UP PAGE */
+  if (!isSignedIn) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-6">
+        <div className="mb-6 text-center space-y-1">
+          <span className="text-3xl font-black text-white">
+            Flow<span style={{ color: "#4ade80" }}>chat</span> Admin
+          </span>
+          <p className="text-xs text-gray-400">
+            Sign in with an authorized Admin Gmail to unlock Master Control.
+          </p>
+        </div>
+
+        <div className="bg-gray-900 p-2 rounded-3xl border border-gray-800 shadow-2xl">
+          <SignIn
+            routing="hash"
+            appearance={{
+              variables: {
+                colorPrimary: "#03856b",
+                colorBackground: "#0f172a",
+              },
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  /* SCREEN 2: SIGNED IN BUT NOT AN AUTHORIZED ADMIN GMAIL (ANONYMOUS 403) */
+  if (!isAuthorizedAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-gray-900 rounded-3xl p-8 border border-red-500/30 shadow-2xl space-y-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/20 text-red-400 font-bold flex items-center justify-center text-2xl mx-auto border border-red-500/30">
+            ⛔
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black text-white">403 Access Denied</h1>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              You are not authorized to access Master Admin Control.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-gray-800/80 border border-gray-700/80 text-xs text-gray-300">
+            Please log out and sign in with an authorized Admin Gmail account.
+          </div>
+
+          <div className="flex justify-center pt-2">
+            <UserButton />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* SCREEN 3: AUTHENTICATED & AUTHORIZED ADMIN MANAGER DASHBOARD */
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col md:flex-row">
       {/* SIDEBAR NAVIGATION MENU */}
@@ -681,17 +398,12 @@ export default function AdminDashboardPage() {
           </nav>
         </div>
 
-        <div className="pt-6 border-t border-gray-800 space-y-3">
+        <div className="pt-6 border-t border-gray-800 flex items-center justify-between">
           <div className="text-[11px] text-gray-400 min-w-0">
-            <p className="font-bold text-white truncate">Admin Manager Active</p>
-            <p className="text-[10px] text-emerald-400 font-mono truncate">{adminGmailInput}</p>
+            <p className="font-bold text-white truncate">{user.firstName || "Master Admin"}</p>
+            <p className="text-[10px] text-emerald-400 font-mono truncate">{currentUserEmail}</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="w-full py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/20 transition-colors"
-          >
-            🔒 Logout Admin
-          </button>
+          <UserButton />
         </div>
       </aside>
 
@@ -1090,14 +802,14 @@ export default function AdminDashboardPage() {
                 Admin Manager Whitelist & System Control
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                Add new Admin Managers with Gmail + Custom Passwords & Full Admin Control.
+                Add new Admin Manager Gmails. Only whitelisted Gmails can access Admin Panel.
               </p>
             </div>
 
             {/* Add New Admin Manager Form */}
             <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-4">
               <h3 className="font-bold text-white text-base">
-                ➕ Add New Admin Manager (Gmail + Custom Password)
+                ➕ Add New Authorized Admin Gmail Address
               </h3>
 
               <form onSubmit={handleAddAdminAccount} className="space-y-4">
@@ -1109,38 +821,24 @@ export default function AdminDashboardPage() {
                     <input
                       type="email"
                       required
-                      value={createAdminEmail}
-                      onChange={(e) => setCreateAdminEmail(e.target.value)}
+                      value={newAdminEmail}
+                      onChange={(e) => setNewAdminEmail(e.target.value)}
                       placeholder="partner@gmail.com"
                       className="w-full px-4 py-2.5 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 mb-1">
-                      Set Custom Password for New Admin:
+                  <div className="flex items-center pt-5">
+                    <label className="inline-flex items-center gap-2 text-xs text-gray-300 font-semibold cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={autoVerifyNewAdmin}
+                        onChange={(e) => setAutoVerifyNewAdmin(e.target.checked)}
+                        className="w-4 h-4 rounded text-[#03856b] focus:ring-0"
+                      />
+                      Auto-Verify & Grant Full Admin Access Instantly
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={createAdminPassword}
-                      onChange={(e) => setCreateAdminPassword(e.target.value)}
-                      placeholder="PartnerPass2026!"
-                      className="w-full px-4 py-2.5 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-                    />
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <label className="inline-flex items-center gap-2 text-xs text-gray-300 font-semibold cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={autoVerifyNewAdmin}
-                      onChange={(e) => setAutoVerifyNewAdmin(e.target.checked)}
-                      className="w-4 h-4 rounded text-[#03856b] focus:ring-0"
-                    />
-                    Auto-Verify & Grant Full Admin Control Instantly
-                  </label>
                 </div>
 
                 <button
@@ -1148,30 +846,16 @@ export default function AdminDashboardPage() {
                   disabled={addingAdmin}
                   className="px-6 py-2.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition-colors"
                 >
-                  {addingAdmin ? "Adding Admin..." : "Add Admin Manager with Full Control →"}
+                  {addingAdmin ? "Adding Admin..." : "Add Admin Gmail to Whitelist →"}
                 </button>
               </form>
-
-              {generatedLink && (
-                <div className="p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 space-y-2">
-                  <p className="text-xs font-bold uppercase">
-                    🔗 Admin Verification Link Generated:
-                  </p>
-                  <p className="text-xs font-mono bg-gray-950 p-2.5 rounded-lg border border-gray-800 select-all break-all text-white">
-                    {generatedLink}
-                  </p>
-                  <p className="text-[11px] text-gray-400">
-                    Send this link to the new Admin Manager to complete verification.
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Whitelisted Admin Managers List */}
             <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
               <div className="p-4 bg-gray-800/80 border-b border-gray-800">
                 <h3 className="font-bold text-white text-xs uppercase tracking-wider">
-                  Authorized Admin Managers List ({adminWhitelist.length})
+                  Authorized Admin Gmail List ({adminWhitelist.length})
                 </h3>
               </div>
 
@@ -1187,16 +871,13 @@ export default function AdminDashboardPage() {
                         <p className="text-xs font-mono font-bold text-white">
                           {adm.email}
                         </p>
-                        <p className="text-[11px] text-emerald-400 font-mono">
-                          Password: {adm.password || "••••••••"}
+                        <p className="text-[10px] text-emerald-400 font-mono">
+                          {adm.isSuper ? "Super Admin" : "Whitelisted Admin"}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-gray-500 mr-2">
-                        {adm.isSuper ? "Super Admin" : "Full Admin Control"}
-                      </span>
                       {adm.status === "verified" ? (
                         <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                           ✓ Verified & Active
@@ -1307,112 +988,6 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* FORGOT PASSWORD MODAL (POPUP) */}
-      {showForgotModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-3xl max-w-md w-full p-6 md:p-8 border border-gray-800 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black text-white">🔐 Reset Admin Password</h3>
-              <button
-                onClick={() => setShowForgotModal(false)}
-                className="text-gray-400 hover:text-white font-bold text-lg"
-              >
-                ✕
-              </button>
-            </div>
-
-            {forgotErr && (
-              <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-semibold">
-                {forgotErr}
-              </div>
-            )}
-
-            {forgotMsg && (
-              <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 space-y-1">
-                <p className="text-xs font-bold text-emerald-400">{forgotMsg}</p>
-              </div>
-            )}
-
-            {forgotStep === "email" ? (
-              <form onSubmit={handleRequestOtp} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-300 mb-1">
-                    Enter Admin Personal Gmail Address:
-                  </label>
-                  <input
-                    type="email"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    required
-                    placeholder="ashishkushwaha1822@gmail.com"
-                    className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
-                >
-                  Send Reset OTP to Gmail →
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-300 mb-1">
-                    Reset OTP Code from Gmail:
-                  </label>
-                  <input
-                    type="text"
-                    value={forgotOtp}
-                    onChange={(e) => setForgotOtp(e.target.value)}
-                    placeholder="Enter 6-digit OTP code from Gmail"
-                    required
-                    autoComplete="off"
-                    className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-center text-base tracking-widest font-mono focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-300 mb-1">
-                    New Custom Admin Username / Gmail:
-                  </label>
-                  <input
-                    type="text"
-                    value={resetAdminUsername}
-                    onChange={(e) => setResetAdminUsername(e.target.value)}
-                    required
-                    placeholder="admin or ashishkushwaha1822@gmail.com"
-                    className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-300 mb-1">
-                    New Custom Password:
-                  </label>
-                  <input
-                    type="password"
-                    value={resetAdminPassword}
-                    onChange={(e) => setResetAdminPassword(e.target.value)}
-                    required
-                    placeholder="Enter new custom password"
-                    className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-3.5 rounded-xl bg-[#03856b] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg"
-                >
-                  Save & Activate New Password →
-                </button>
-              </form>
-            )}
           </div>
         </div>
       )}
