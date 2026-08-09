@@ -90,13 +90,15 @@ export default function InstagramDashboardPage() {
         const parsed = JSON.parse(saved);
         setAccount(parsed);
         setIsConnected(true);
+      } else {
+        setIsConnected(false);
       }
 
       // Check if coming back from Meta OAuth redirect
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.has("code")) {
         const oauthAccount: InstagramAccount = {
-          handle: "@meta_connected_creator",
+          handle: "@meta_verified_account",
           name: "Meta Verified Instagram Account",
           followers: "25.8K",
           connectedAt: "Just now",
@@ -140,7 +142,7 @@ export default function InstagramDashboardPage() {
       } catch (e) {
         console.error(e);
       }
-    }, 600);
+    }, 400);
   };
 
   const handleDisconnect = () => {
