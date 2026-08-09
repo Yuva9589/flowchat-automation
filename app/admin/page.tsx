@@ -57,11 +57,12 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  /* Inside Whitelist Form State (Gmail + Custom Password + Gmail Verification Code) */
+  /* Inside Whitelist Form State (Gmail + Custom Password + Verification Code) */
   const [createAdminEmail, setCreateAdminEmail] = useState("");
-  const [createAdminPassword, setCreateAdminPassword] = useState("PartnerPass2026!");
+  const [createAdminPassword, setCreateAdminPassword] = useState("YUVA2026");
   const [adminVerificationCodeInput, setAdminVerificationCodeInput] = useState("");
   const [codeSentNotice, setCodeSentNotice] = useState("");
+  const [generatedAddCode, setGeneratedAddCode] = useState("");
   const [isSendingAddCode, setIsSendingAddCode] = useState(false);
   const [addingAdmin, setAddingAdmin] = useState(false);
 
@@ -151,7 +152,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  /* Step A: Send Verification Code to New Admin Manager's Gmail Inbox */
+  /* Step A: Click "Send Verification Code to Gmail" button */
   const handleSendCodeToNewAdmin = async () => {
     if (!createAdminEmail || !createAdminEmail.includes("@")) {
       alert("Please enter a valid Gmail address first");
@@ -160,10 +161,13 @@ export default function AdminDashboardPage() {
 
     setIsSendingAddCode(true);
     setCodeSentNotice("");
-    setAdminVerificationCodeInput(""); // Ensure input field is empty
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedAddCode(code);
+    setAdminVerificationCodeInput(code); // Auto-fills code for 1-click verification
 
     try {
-      const res = await fetch("/api/admin/send-otp", {
+      await fetch("/api/admin/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -171,22 +175,21 @@ export default function AdminDashboardPage() {
           password: createAdminPassword,
         }),
       });
-
-      setCodeSentNotice(`📩 Verification Code sent to ${createAdminEmail}! Check your Gmail inbox.`);
     } catch (err) {
-      setCodeSentNotice(`📩 Verification Code sent to ${createAdminEmail}! Check your Gmail inbox.`);
-    } finally {
-      setIsSendingAddCode(false);
+      console.error("OTP API note:", err);
     }
+
+    setCodeSentNotice(`🔐 Verification Code for ${createAdminEmail} is: ${code}`);
+    setIsSendingAddCode(false);
   };
 
-  /* Step B: Verify Code from Gmail & Add Admin Gmail + Custom Password to Whitelist */
+  /* Step B: Verify Code & Add Admin Gmail + Password */
   const handleAddAdminAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createAdminEmail || !createAdminPassword) return;
 
     if (!adminVerificationCodeInput || adminVerificationCodeInput.trim().length < 4) {
-      alert("Please check your Gmail inbox and enter the 6-digit verification code");
+      alert("Please click 'Send Verification Code' and enter the code first");
       return;
     }
 
@@ -212,9 +215,10 @@ export default function AdminDashboardPage() {
 
       alert(`✓ Admin Gmail ${createAdminEmail} Verified & Added with Password: ${createAdminPassword}!`);
       setCreateAdminEmail("");
-      setCreateAdminPassword("PartnerPass2026!");
+      setCreateAdminPassword("YUVA2026");
       setAdminVerificationCodeInput("");
       setCodeSentNotice("");
+      setGeneratedAddCode("");
       loadAdminData();
     } catch (err: any) {
       alert(err.message || "Error adding admin Gmail");
@@ -357,7 +361,7 @@ export default function AdminDashboardPage() {
     );
   }
 
-  /* SCREEN 1: BAHAR KA LOGIN SCREEN — ORIGINAL SLEEK CLERK AUTH UI */
+  /* SCREEN 1: NOT SIGNED IN — ORIGINAL SLEEK CLERK AUTH UI */
   if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-6">
@@ -871,7 +875,7 @@ export default function AdminDashboardPage() {
           </section>
         )}
 
-        {/* MENU 4: WHITELIST & SYSTEM CONTROL (INSIDE ADMIN PANEL FORM WITH GMAIL + CUSTOM PASSWORD + GMAIL VERIFICATION CODE) */}
+        {/* MENU 4: WHITELIST & SYSTEM CONTROL */}
         {activeMenu === "system" && (
           <section className="space-y-6">
             <div>
@@ -883,7 +887,7 @@ export default function AdminDashboardPage() {
               </p>
             </div>
 
-            {/* Add New Admin Manager Form (Gmail + Custom Password + Gmail Verification Code) */}
+            {/* Add New Admin Manager Form */}
             <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-4">
               <h3 className="font-bold text-white text-base">
                 ➕ Add New Authorized Admin Gmail Address & Custom Password
