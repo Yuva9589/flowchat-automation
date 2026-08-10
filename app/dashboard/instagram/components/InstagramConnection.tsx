@@ -100,7 +100,7 @@ export default function InstagramConnection({
 
   const handleMetaOAuth = () => {
     const appId = "1594051438990227";
-    const redirectUri = encodeURIComponent("https://earnwithads.in/dashboard/instagram");
+    const redirectUri = encodeURIComponent("https://earnwithads.in/api/auth/instagram/callback");
     const scope = encodeURIComponent(
       "instagram_basic,instagram_manage_comments,instagram_manage_messages,pages_show_list,pages_read_engagement"
     );
