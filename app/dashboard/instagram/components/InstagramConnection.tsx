@@ -29,14 +29,6 @@ function InstagramLogo({ size = 28 }: { size?: number }) {
   );
 }
 
-function FacebookIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
-    </svg>
-  );
-}
-
 export default function InstagramConnection({
   isConnected,
   isConnecting,
@@ -81,14 +73,16 @@ export default function InstagramConnection({
     setIsEditing(false);
   };
 
-  const handleMetaOAuth = () => {
+  const handleInstagramDirectOAuth = () => {
     const appId = "1594051438990227";
-    const redirectUri = encodeURIComponent("https://earnwithads.in/api/auth/instagram/callback");
+    const redirectUri = encodeURIComponent("https://earnwithads.in/api/auth/ig/callback");
     const scope = encodeURIComponent(
-      "instagram_basic,instagram_manage_comments,instagram_manage_messages,pages_show_list,pages_read_engagement"
+      "instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments"
     );
-    const oauthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
-    window.location.href = oauthUrl;
+
+    // Direct Instagram OAuth Login Dialog (instagram.com)
+    const instagramOAuthUrl = `https://www.instagram.com/oauth/authorize/third_party/?client_id=${appId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&enable_fb_login=1`;
+    window.location.href = instagramOAuthUrl;
   };
 
   return (
@@ -102,10 +96,10 @@ export default function InstagramConnection({
             </div>
             <div>
               <h2 className="text-xl font-black text-gray-900">
-                1. Connect Instagram Professional Account
+                1. Connect Instagram Account
               </h2>
               <p className="text-xs text-gray-500">
-                Connect via Official Meta Sign-In or Enter your Instagram handle to sync automations.
+                Sign in directly on Instagram.com to grant comment-to-DM permissions.
               </p>
             </div>
           </div>
@@ -135,11 +129,11 @@ export default function InstagramConnection({
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
                 <span className="text-sm font-black text-emerald-900">
-                  Account Live & Connected
+                  Instagram Account Connected & Active
                 </span>
               </div>
               <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-[#03856b]">
-                ✓ Meta Graph API Active
+                ✓ Instagram Graph API Verified
               </span>
             </div>
 
@@ -163,29 +157,32 @@ export default function InstagramConnection({
             </div>
           </div>
         ) : (
-          /* DISCONNECTED / EDITING FORM VIEW (TechNerve AI Style) */
+          /* DIRECT INSTAGRAM OAUTH & HANDLE CONNECT VIEW */
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Left Method: Meta Sign-In */}
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-50/80 to-indigo-50/50 border border-blue-100 space-y-4 flex flex-col justify-between">
+            {/* Left Method: Direct Instagram.com Login */}
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 space-y-4 flex flex-col justify-between">
               <div className="space-y-2">
-                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-blue-100 text-blue-800 tracking-wider">
-                  Method 1: Meta Official Login
+                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-purple-100 text-purple-800 tracking-wider">
+                  Method 1: Direct Instagram.com Login
                 </span>
                 <h3 className="text-lg font-black text-gray-900">
-                  Sign in with Facebook / Meta
+                  Connect via Instagram Login
                 </h3>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Connect directly using Meta’s official Graph API OAuth dialog. Automatically syncs your Instagram Business account & pages.
+                  Opens official <b>Instagram.com</b> authorization page where user logs in with their Instagram ID & Password and grants permission.
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={handleMetaOAuth}
-                className="w-full py-3.5 px-4 rounded-xl bg-[#1877F2] text-white font-black text-sm hover:bg-blue-600 transition-all shadow-md flex items-center justify-center gap-2"
+                onClick={handleInstagramDirectOAuth}
+                className="w-full py-4 px-4 rounded-xl text-white font-black text-base shadow-lg hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                style={{
+                  backgroundImage: "linear-gradient(135deg, #8b5cf6, #ec4899, #f97316)",
+                }}
               >
-                <FacebookIcon />
-                Continue with Facebook / Meta Login
+                <InstagramLogo size={22} />
+                📸 Log In & Connect Instagram
               </button>
             </div>
 
@@ -193,10 +190,10 @@ export default function InstagramConnection({
             <form onSubmit={handleManualSubmit} className="p-6 rounded-2xl bg-gray-50/80 border border-gray-200 space-y-4">
               <div className="space-y-1">
                 <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-gray-200 text-gray-700 tracking-wider">
-                  Method 2: Quick Handle Sync
+                  Method 2: Quick Instagram Handle Connect
                 </span>
                 <h3 className="text-lg font-black text-gray-900">
-                  Enter Your Instagram Username
+                  Enter Instagram Username (@handle)
                 </h3>
               </div>
 
@@ -247,7 +244,7 @@ export default function InstagramConnection({
                   backgroundImage: "linear-gradient(135deg, #03856b, #04a085)",
                 }}
               >
-                {isConnecting ? "Connecting..." : "🚀 Save & Connect Account"}
+                {isConnecting ? "Connecting..." : "🚀 Save & Connect Handle"}
               </button>
             </form>
           </div>
