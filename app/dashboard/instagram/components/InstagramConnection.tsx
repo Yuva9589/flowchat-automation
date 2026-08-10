@@ -40,6 +40,7 @@ export default function InstagramConnection({
   const [nameInput, setNameInput] = useState(account.name || "");
   const [followersInput, setFollowersInput] = useState(account.followers || "");
   const [isEditing, setIsEditing] = useState(!isConnected);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (isConnected && account.handle) {
@@ -73,10 +74,12 @@ export default function InstagramConnection({
     setIsEditing(false);
   };
 
+  const redirectUriStr = "https://earnwithads.in/api/auth/ig/callback";
+
   const handleInstagramDirectOAuth = () => {
     // Exact Instagram App ID from Meta Developer Console (Flowchat-IG)
     const instagramAppId = "1578162103938474";
-    const redirectUri = encodeURIComponent("https://earnwithads.in/api/auth/ig/callback");
+    const redirectUri = encodeURIComponent(redirectUriStr);
     const scope = encodeURIComponent(
       "instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments"
     );
@@ -84,6 +87,12 @@ export default function InstagramConnection({
     // Direct Instagram OAuth Login Dialog (instagram.com)
     const instagramOAuthUrl = `https://www.instagram.com/oauth/authorize/third_party/?client_id=${instagramAppId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&enable_fb_login=1`;
     window.location.href = instagramOAuthUrl;
+  };
+
+  const handleCopyUri = () => {
+    navigator.clipboard.writeText(redirectUriStr);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -159,95 +168,117 @@ export default function InstagramConnection({
           </div>
         ) : (
           /* DIRECT INSTAGRAM OAUTH & HANDLE CONNECT VIEW */
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Left Method: Direct Instagram.com Login */}
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 space-y-4 flex flex-col justify-between">
-              <div className="space-y-2">
-                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-purple-100 text-purple-800 tracking-wider">
-                  Method 1: Direct Instagram.com Login
-                </span>
-                <h3 className="text-lg font-black text-gray-900">
-                  Connect via Instagram Login
-                </h3>
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  Opens official <b>Instagram.com</b> authorization page where user logs in with their Instagram ID & Password and grants permission.
-                </p>
+          <div className="space-y-6">
+            {/* Meta Redirect URI Notice Box */}
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2">
+              <div className="flex items-center justify-between font-bold">
+                <span>⚠️ Meta Developer Console Notice: Valid OAuth Redirect URI</span>
+                <button
+                  type="button"
+                  onClick={handleCopyUri}
+                  className="px-3 py-1 rounded-lg bg-amber-200 hover:bg-amber-300 font-bold text-[11px] text-amber-950 transition-colors"
+                >
+                  {copied ? "✓ Copied!" : "📋 Copy Redirect URI"}
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={handleInstagramDirectOAuth}
-                className="w-full py-4 px-4 rounded-xl text-white font-black text-base shadow-lg hover:opacity-90 transition-all flex items-center justify-center gap-2"
-                style={{
-                  backgroundImage: "linear-gradient(135deg, #8b5cf6, #ec4899, #f97316)",
-                }}
-              >
-                <InstagramLogo size={22} />
-                📸 Log In & Connect Instagram
-              </button>
+              <p className="text-amber-800 leading-relaxed">
+                Meta OAuth login ke liye is URL ko Meta Developer Portal par <b>"Valid OAuth Redirect URIs"</b> me paste karein:
+              </p>
+              <code className="block p-2 rounded-xl bg-amber-100/80 font-mono text-[11px] text-amber-950 break-all select-all font-bold">
+                {redirectUriStr}
+              </code>
             </div>
 
-            {/* Right Method: Direct Handle Sync */}
-            <form onSubmit={handleManualSubmit} className="p-6 rounded-2xl bg-gray-50/80 border border-gray-200 space-y-4">
-              <div className="space-y-1">
-                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-gray-200 text-gray-700 tracking-wider">
-                  Method 2: Quick Instagram Handle Connect
-                </span>
-                <h3 className="text-lg font-black text-gray-900">
-                  Enter Instagram Username (@handle)
-                </h3>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-bold text-gray-700">
-                    Instagram Handle <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="@ashish_kushwaha"
-                    value={handleInput}
-                    onChange={(e) => setHandleInput(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 font-bold text-gray-900 text-sm focus:border-[#03856b] focus:ring-2 focus:ring-[#03856b]/20 outline-none bg-white"
-                  />
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Left Method: Direct Instagram.com Login */}
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 space-y-4 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-purple-100 text-purple-800 tracking-wider">
+                    Method 1: Direct Instagram.com Login
+                  </span>
+                  <h3 className="text-lg font-black text-gray-900">
+                    Connect via Instagram Login
+                  </h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Opens official <b>Instagram.com</b> authorization page where user logs in with their Instagram ID & Password and grants permission.
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-bold text-gray-700">Account Name</label>
-                    <input
-                      type="text"
-                      placeholder="Ashish Kushwaha"
-                      value={nameInput}
-                      onChange={(e) => setNameInput(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-gray-700">Followers</label>
-                    <input
-                      type="text"
-                      placeholder="12.4K"
-                      value={followersInput}
-                      onChange={(e) => setFollowersInput(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold bg-white"
-                    />
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleInstagramDirectOAuth}
+                  className="w-full py-4 px-4 rounded-xl text-white font-black text-base shadow-lg hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                  style={{
+                    backgroundImage: "linear-gradient(135deg, #8b5cf6, #ec4899, #f97316)",
+                  }}
+                >
+                  <InstagramLogo size={22} />
+                  📸 Log In & Connect Instagram
+                </button>
               </div>
 
-              <button
-                type="submit"
-                disabled={isConnecting}
-                className="w-full py-3.5 rounded-xl text-white font-black text-sm shadow-md hover:opacity-90 transition-opacity"
-                style={{
-                  backgroundImage: "linear-gradient(135deg, #03856b, #04a085)",
-                }}
-              >
-                {isConnecting ? "Connecting..." : "🚀 Save & Connect Handle"}
-              </button>
-            </form>
+              {/* Right Method: Direct Handle Sync */}
+              <form onSubmit={handleManualSubmit} className="p-6 rounded-2xl bg-gray-50/80 border border-gray-200 space-y-4">
+                <div className="space-y-1">
+                  <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-gray-200 text-gray-700 tracking-wider">
+                    Method 2: Quick Instagram Handle Connect
+                  </span>
+                  <h3 className="text-lg font-black text-gray-900">
+                    Enter Instagram Username (@handle)
+                  </h3>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-gray-700">
+                      Instagram Handle <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="@ashish_kushwaha"
+                      value={handleInput}
+                      onChange={(e) => setHandleInput(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 font-bold text-gray-900 text-sm focus:border-[#03856b] focus:ring-2 focus:ring-[#03856b]/20 outline-none bg-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold text-gray-700">Account Name</label>
+                      <input
+                        type="text"
+                        placeholder="Ashish Kushwaha"
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-700">Followers</label>
+                      <input
+                        type="text"
+                        placeholder="12.4K"
+                        value={followersInput}
+                        onChange={(e) => setFollowersInput(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isConnecting}
+                  className="w-full py-3.5 rounded-xl text-white font-black text-sm shadow-md hover:opacity-90 transition-opacity"
+                  style={{
+                    backgroundImage: "linear-gradient(135deg, #03856b, #04a085)",
+                  }}
+                >
+                  {isConnecting ? "Connecting..." : "🚀 Save & Connect Handle"}
+                </button>
+              </form>
+            </div>
           </div>
         )}
       </div>
