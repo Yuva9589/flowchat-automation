@@ -19,8 +19,9 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const appId = process.env.META_APP_ID || "1594051438990227";
-  const appSecret = process.env.META_APP_SECRET || "350e42d76503cbfb0bfa2ddbe320ef45";
+  // Exact Instagram App ID from Meta Developer Console (Flowchat-IG)
+  const appId = process.env.INSTAGRAM_APP_ID || "1578162103938474";
+  const appSecret = process.env.INSTAGRAM_APP_SECRET || "350e42d76503cbfb0bfa2ddbe320ef45";
   const redirectUri = "https://earnwithads.in/api/auth/ig/callback";
 
   try {
@@ -40,12 +41,6 @@ export async function GET(req: NextRequest) {
     const tokenData = await tokenRes.json();
 
     let shortLivedToken = tokenData.access_token;
-    let userId = tokenData.user_id;
-
-    // Fallback if Instagram OAuth Token Exchange endpoint returns alternative format
-    if (!shortLivedToken) {
-      console.warn("Instagram Token exchange response format fallback:", tokenData);
-    }
 
     // 2. Query Instagram Graph API for Account Details (username, name, followers)
     let igHandle = "@instagram_creator";
@@ -67,7 +62,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 3. Save to Supabase DB if user is authenticated
+    // 3. Save to Supabase DB
     try {
       const supabase = createServerSupabaseClient();
       await supabase.from("instagram_accounts").upsert([

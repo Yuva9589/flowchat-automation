@@ -74,14 +74,15 @@ export default function InstagramConnection({
   };
 
   const handleInstagramDirectOAuth = () => {
-    const appId = "1594051438990227";
+    // Exact Instagram App ID from Meta Developer Console (Flowchat-IG)
+    const instagramAppId = "1578162103938474";
     const redirectUri = encodeURIComponent("https://earnwithads.in/api/auth/ig/callback");
     const scope = encodeURIComponent(
       "instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments"
     );
 
     // Direct Instagram OAuth Login Dialog (instagram.com)
-    const instagramOAuthUrl = `https://www.instagram.com/oauth/authorize/third_party/?client_id=${appId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&enable_fb_login=1`;
+    const instagramOAuthUrl = `https://www.instagram.com/oauth/authorize/third_party/?client_id=${instagramAppId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&enable_fb_login=1`;
     window.location.href = instagramOAuthUrl;
   };
 
