@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from "react";
 
-/* ============= Types ============= */
-
 export interface InstagramAccount {
   handle: string;
   name: string;
   followers: string;
   connectedAt: string;
   status: string;
+  access_token?: string;
 }
 
 interface Props {
@@ -20,9 +19,7 @@ interface Props {
   onDisconnect: () => void;
 }
 
-/* ============= Icons ============= */
-
-function InstagramLogo({ size = 24 }: { size?: number }) {
+function InstagramLogo({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
@@ -32,32 +29,13 @@ function InstagramLogo({ size = 24 }: { size?: number }) {
   );
 }
 
-function CheckCircleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-      <polyline points="22 4 12 14.01 9 11.01" />
-    </svg>
-  );
-}
-
-function ShieldIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
-  );
-}
-
 function FacebookIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
       <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
     </svg>
   );
 }
-
-/* ============= Main Component ============= */
 
 export default function InstagramConnection({
   isConnected,
@@ -66,36 +44,41 @@ export default function InstagramConnection({
   onConnectAccount,
   onDisconnect,
 }: Props) {
-  const [showModal, setShowModal] = useState(false);
-  const [inputHandle, setInputHandle] = useState(account.handle || "@ashish_kushwaha");
-  const [inputName, setInputName] = useState(account.name || "Ashish Kushwaha");
-  const [inputFollowers, setInputFollowers] = useState(account.followers || "12.4K");
+  const [handleInput, setHandleInput] = useState(account.handle || "");
+  const [nameInput, setNameInput] = useState(account.name || "");
+  const [followersInput, setFollowersInput] = useState(account.followers || "");
+  const [isEditing, setIsEditing] = useState(!isConnected);
 
   useEffect(() => {
-    if (account.handle) {
-      setInputHandle(account.handle);
-      setInputName(account.name);
-      setInputFollowers(account.followers);
+    if (isConnected && account.handle) {
+      setHandleInput(account.handle);
+      setNameInput(account.name);
+      setFollowersInput(account.followers);
+      setIsEditing(false);
+    } else {
+      setIsEditing(true);
     }
-  }, [account]);
+  }, [isConnected, account]);
 
-  const handleSaveManualAccount = (e: React.FormEvent) => {
+  const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    let cleanHandle = inputHandle.trim();
+    if (!handleInput.trim()) return;
+
+    let cleanHandle = handleInput.trim();
     if (!cleanHandle.startsWith("@")) {
       cleanHandle = "@" + cleanHandle;
     }
 
     const newAcc: InstagramAccount = {
       handle: cleanHandle,
-      name: inputName.trim() || cleanHandle.replace("@", ""),
-      followers: inputFollowers.trim() || "1.2K",
+      name: nameInput.trim() || cleanHandle.replace("@", ""),
+      followers: followersInput.trim() || "10K",
       connectedAt: "Just now",
       status: "Active",
     };
 
     onConnectAccount(newAcc);
-    setShowModal(false);
+    setIsEditing(false);
   };
 
   const handleMetaOAuth = () => {
@@ -110,294 +93,166 @@ export default function InstagramConnection({
 
   return (
     <section id="connection" className="scroll-mt-6">
-      {/* Section header */}
-      <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h2 className="text-xl font-black text-gray-900">1. Instagram Connection</h2>
-          <p className="text-sm text-gray-500">
-            Connect your Instagram Business or Tester account to start automating DMs.
-          </p>
-        </div>
-
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-50 text-[#03856b] border border-emerald-200 hover:bg-emerald-100 transition-all flex items-center gap-1.5 shadow-sm"
-        >
-          ⚙️ {isConnected ? "Change / Edit Connected Account" : "Connect Account Modal"}
-        </button>
-      </div>
-
-      {/* Connection Card */}
-      <div
-        className={`bg-white rounded-2xl p-5 md:p-6 border transition-all ${
-          isConnected
-            ? "border-[#03856b]/40 shadow-md bg-emerald-50/10"
-            : "border-gray-200 shadow-sm"
-        }`}
-      >
-        <div className="flex items-start gap-4 flex-wrap md:flex-nowrap">
-          {/* Icon */}
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-md flex-shrink-0"
-            style={{
-              backgroundImage:
-                "linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #f97316 100%)",
-            }}
-          >
-            <InstagramLogo size={24} />
-          </div>
-
-          {/* Text */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <h3 className="text-base font-bold text-gray-900">
-                Instagram Business Account
-              </h3>
-              {isConnected ? (
-                <span
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
-                  style={{
-                    backgroundColor: "rgba(3, 133, 107, 0.15)",
-                    color: "#03856b",
-                  }}
-                >
-                  <CheckCircleIcon />
-                  Connected ({account.handle || "@your.brand"})
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
-                  ⚪ Not Connected
-                </span>
-              )}
+      <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-xl space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-4 border-b border-gray-100 pb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 via-pink-500 to-amber-500 text-white flex items-center justify-center shadow-md">
+              <InstagramLogo />
             </div>
-
-            <p className="text-sm text-gray-600 mb-3">
-              {isConnected
-                ? `Connected to ${account.handle}. Automations are running 24/7.`
-                : "Click 'Connect Instagram Account' to enter your Instagram Handle or sign in with Meta."}
-            </p>
-
-            {/* Feature pills */}
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                "Comment-to-DM",
-                "Follow-gate",
-                "Story replies",
-                "AI variations",
-              ].map((feat) => (
-                <span
-                  key={feat}
-                  className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-gray-100 text-gray-600"
-                >
-                  {feat}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="w-full md:w-auto md:ml-4 flex-shrink-0 flex flex-col sm:flex-row md:flex-col gap-2">
-            {isConnecting ? (
-              <button
-                disabled
-                className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm text-white opacity-70 cursor-not-allowed"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(135deg, #03856b, #04a085)",
-                }}
-              >
-                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    className="opacity-25"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    className="opacity-75"
-                  />
-                </svg>
-                Connecting...
-              </button>
-            ) : isConnected ? (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="px-4 py-2.5 rounded-xl font-bold text-xs bg-[#03856b] text-white hover:bg-[#03856b]/90 transition-all shadow-sm flex items-center justify-center gap-1"
-                >
-                  ✏️ Edit Account
-                </button>
-                <button
-                  onClick={onDisconnect}
-                  className="px-4 py-2.5 rounded-xl font-bold text-xs bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-all flex items-center justify-center gap-1"
-                >
-                  🔌 Disconnect
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowModal(true)}
-                className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-black text-sm text-white transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(135deg, #03856b, #04a085)",
-                }}
-              >
-                📸 Connect Instagram Account →
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Connected details */}
-        {isConnected && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: "Account Username", value: account.handle || "@ashish_kushwaha" },
-                { label: "Display Name", value: account.name || "Ashish Kushwaha" },
-                { label: "Followers", value: account.followers || "12.4K" },
-                { label: "Status", value: account.status || "Active", color: "#03856b" },
-              ].map((s, i) => (
-                <div key={i} className="bg-white p-3 rounded-xl border border-gray-100">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-0.5">
-                    {s.label}
-                  </p>
-                  <p
-                    className="text-sm font-bold truncate"
-                    style={{ color: s.color || "#111827" }}
-                  >
-                    {s.value}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Safety note */}
-        <div className="mt-4 pt-4 border-t border-gray-100 flex items-start gap-2 text-xs text-gray-600">
-          <span className="mt-0.5" style={{ color: "#03856b" }}>
-            <ShieldIcon />
-          </span>
-          <p>
-            <span className="font-semibold text-gray-900">
-              100% safe & official Meta API.
-            </span>{" "}
-            Flowchat uses Meta's Graph API — approved for Instagram messaging. We never store passwords.
-          </p>
-        </div>
-      </div>
-
-      {/* Connection Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-6 relative border border-gray-100 animate-in fade-in zoom-in duration-200">
-            <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-sm font-bold"
-            >
-              ✕
-            </button>
-
-            <div className="space-y-2">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-500 via-pink-500 to-amber-500 text-white flex items-center justify-center text-2xl shadow-md">
-                📸
-              </div>
-              <h3 className="text-2xl font-black text-gray-900">
-                Connect Your Instagram Account
-              </h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                Connect your real Instagram Professional or Tester account to test comment-to-DM automation.
+            <div>
+              <h2 className="text-xl font-black text-gray-900">
+                1. Connect Instagram Professional Account
+              </h2>
+              <p className="text-xs text-gray-500">
+                Connect via Official Meta Sign-In or Enter your Instagram handle to sync automations.
               </p>
             </div>
+          </div>
 
-            {/* Option 1: Meta OAuth */}
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-blue-700">
-                  Option 1: Official Meta / Facebook Sign-In
-                </span>
-                <span className="text-[10px] bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full font-bold">
-                  Recommended
+          {isConnected && !isEditing && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
+              >
+                ✏️ Change Account
+              </button>
+              <button
+                onClick={onDisconnect}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-all"
+              >
+                🔌 Disconnect
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* CONNECTED STATE VIEW */}
+        {isConnected && !isEditing ? (
+          <div className="p-6 rounded-2xl bg-gradient-to-r from-emerald-50/80 via-teal-50/50 to-white border border-emerald-200 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
+                <span className="text-sm font-black text-emerald-900">
+                  Account Live & Connected
                 </span>
               </div>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-[#03856b]">
+                ✓ Meta Graph API Active
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                <p className="text-[10px] font-bold text-gray-400 uppercase">Instagram Handle</p>
+                <p className="text-base font-black text-gray-900 truncate">{account.handle}</p>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                <p className="text-[10px] font-bold text-gray-400 uppercase">Account Name</p>
+                <p className="text-base font-black text-gray-900 truncate">{account.name}</p>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                <p className="text-[10px] font-bold text-gray-400 uppercase">Followers Count</p>
+                <p className="text-base font-black text-emerald-600 truncate">{account.followers}</p>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                <p className="text-[10px] font-bold text-gray-400 uppercase">Status</p>
+                <p className="text-base font-black text-emerald-600">🟢 Active 24/7</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* DISCONNECTED / EDITING FORM VIEW (TechNerve AI Style) */
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Left Method: Meta Sign-In */}
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-50/80 to-indigo-50/50 border border-blue-100 space-y-4 flex flex-col justify-between">
+              <div className="space-y-2">
+                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-blue-100 text-blue-800 tracking-wider">
+                  Method 1: Meta Official Login
+                </span>
+                <h3 className="text-lg font-black text-gray-900">
+                  Sign in with Facebook / Meta
+                </h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Connect directly using Meta’s official Graph API OAuth dialog. Automatically syncs your Instagram Business account & pages.
+                </p>
+              </div>
+
               <button
                 type="button"
                 onClick={handleMetaOAuth}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#1877F2] text-white font-bold text-sm hover:bg-blue-600 transition-colors shadow-md"
+                className="w-full py-3.5 px-4 rounded-xl bg-[#1877F2] text-white font-black text-sm hover:bg-blue-600 transition-all shadow-md flex items-center justify-center gap-2"
               >
                 <FacebookIcon />
                 Continue with Facebook / Meta Login
               </button>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="h-px bg-gray-200 flex-1" />
-              <span className="text-xs text-gray-400 font-bold uppercase">OR</span>
-              <div className="h-px bg-gray-200 flex-1" />
-            </div>
-
-            {/* Option 2: Enter Tester Account Handle */}
-            <form onSubmit={handleSaveManualAccount} className="space-y-4">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-gray-600 block">
-                Option 2: Enter Your Instagram Username / Handle
-              </span>
-
+            {/* Right Method: Direct Handle Sync */}
+            <form onSubmit={handleManualSubmit} className="p-6 rounded-2xl bg-gray-50/80 border border-gray-200 space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700">
-                  Instagram Handle / Username <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="@ashish_kushwaha"
-                  value={inputHandle}
-                  onChange={(e) => setInputHandle(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#03856b] focus:ring-2 focus:ring-[#03856b]/20 outline-none text-base font-bold text-gray-900 bg-gray-50/50"
-                />
+                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-gray-200 text-gray-700 tracking-wider">
+                  Method 2: Quick Handle Sync
+                </span>
+                <h3 className="text-lg font-black text-gray-900">
+                  Enter Your Instagram Username
+                </h3>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-700">Display Name</label>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-700">
+                    Instagram Handle <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     type="text"
-                    placeholder="Ashish Kushwaha"
-                    value={inputName}
-                    onChange={(e) => setInputName(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold"
+                    required
+                    placeholder="@ashish_kushwaha"
+                    value={handleInput}
+                    onChange={(e) => setHandleInput(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 font-bold text-gray-900 text-sm focus:border-[#03856b] focus:ring-2 focus:ring-[#03856b]/20 outline-none bg-white"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-700">Followers Count</label>
-                  <input
-                    type="text"
-                    placeholder="12.4K"
-                    value={inputFollowers}
-                    onChange={(e) => setInputFollowers(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold"
-                  />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-gray-700">Account Name</label>
+                    <input
+                      type="text"
+                      placeholder="Ashish Kushwaha"
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-700">Followers</label>
+                    <input
+                      type="text"
+                      placeholder="12.4K"
+                      value={followersInput}
+                      onChange={(e) => setFollowersInput(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold bg-white"
+                    />
+                  </div>
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-4 rounded-xl text-white font-bold text-base shadow-xl hover:opacity-90 transition-opacity"
+                disabled={isConnecting}
+                className="w-full py-3.5 rounded-xl text-white font-black text-sm shadow-md hover:opacity-90 transition-opacity"
                 style={{
                   backgroundImage: "linear-gradient(135deg, #03856b, #04a085)",
                 }}
               >
-                ✅ Connect Account & Start Automations
+                {isConnecting ? "Connecting..." : "🚀 Save & Connect Account"}
               </button>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </section>
   );
 }
