@@ -82,35 +82,68 @@ export default function InstagramDashboardPage() {
   const [automations, setAutomations] = useState<ComponentAutomation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load saved Instagram connection from localStorage or OAuth code
+  // Sync Instagram account from DB & localStorage & OAuth callback query
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("flowchat_instagram_account");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setAccount(parsed);
-        setIsConnected(true);
-      } else {
-        setIsConnected(false);
-      }
+    const fetchAccount = async () => {
+      try {
+        // 1. Check URL params from Meta OAuth Callback
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get("connected") === "true" || urlParams.has("code")) {
+          const handle = urlParams.get("handle") || "@meta_verified_account";
+          const name = urlParams.get("name") || "Meta Verified Creator";
+          const followers = urlParams.get("followers") || "25.8K";
 
-      // Check if coming back from Meta OAuth redirect
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.has("code")) {
-        const oauthAccount: InstagramAccount = {
-          handle: "@meta_verified_account",
-          name: "Meta Verified Instagram Account",
-          followers: "25.8K",
-          connectedAt: "Just now",
-          status: "Active",
-        };
-        setAccount(oauthAccount);
-        setIsConnected(true);
-        localStorage.setItem("flowchat_instagram_account", JSON.stringify(oauthAccount));
+          const oauthAccount: InstagramAccount = {
+            handle: handle.startsWith("@") ? handle : "@" + handle,
+            name: name,
+            followers: followers,
+            connectedAt: "Just now",
+            status: "Active",
+          };
+          setAccount(oauthAccount);
+          setIsConnected(true);
+          localStorage.setItem("flowchat_instagram_account", JSON.stringify(oauthAccount));
+
+          // Save to Supabase DB
+          await fetch("/api/instagram/account", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: oauthAccount.handle,
+              name: oauthAccount.name,
+              followers: oauthAccount.followers,
+            }),
+          });
+          return;
+        }
+
+        // 2. Fetch from DB
+        const res = await fetch("/api/instagram/account");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.connected && data.account) {
+            setAccount(data.account);
+            setIsConnected(true);
+            localStorage.setItem("flowchat_instagram_account", JSON.stringify(data.account));
+            return;
+          }
+        }
+
+        // 3. Fallback to localStorage
+        const saved = localStorage.getItem("flowchat_instagram_account");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setAccount(parsed);
+          setIsConnected(true);
+        } else {
+          setIsConnected(false);
+        }
+      } catch (e) {
+        console.error("Account load error:", e);
       }
-    } catch (e) {
-      console.error(e);
-    }
+    };
+
+    fetchAccount();
   }, []);
 
   const loadAutomations = async () => {
@@ -131,24 +164,33 @@ export default function InstagramDashboardPage() {
     loadAutomations();
   }, []);
 
-  const handleConnectAccount = (newAcc: InstagramAccount) => {
+  const handleConnectAccount = async (newAcc: InstagramAccount) => {
     setIsConnecting(true);
-    setTimeout(() => {
-      setAccount(newAcc);
-      setIsConnected(true);
+    setAccount(newAcc);
+    setIsConnected(true);
+    try {
+      localStorage.setItem("flowchat_instagram_account", JSON.stringify(newAcc));
+      await fetch("/api/instagram/account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: newAcc.handle,
+          name: newAcc.name,
+          followers: newAcc.followers,
+        }),
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
       setIsConnecting(false);
-      try {
-        localStorage.setItem("flowchat_instagram_account", JSON.stringify(newAcc));
-      } catch (e) {
-        console.error(e);
-      }
-    }, 400);
+    }
   };
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
     setIsConnected(false);
     try {
       localStorage.removeItem("flowchat_instagram_account");
+      await fetch("/api/instagram/account", { method: "DELETE" });
     } catch (e) {
       console.error(e);
     }
