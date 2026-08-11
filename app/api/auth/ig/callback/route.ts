@@ -4,7 +4,6 @@ import { createServerSupabaseClient } from "@/lib/supabase";
 /**
  * GET /api/auth/ig/callback
  * Handles Direct Instagram OAuth 2.0 Authorization Callback
- * (from www.instagram.com/oauth/authorize/third_party/)
  */
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
@@ -19,58 +18,57 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Exact Instagram App ID from Meta Developer Console (Flowchat-IG)
   const appId = process.env.INSTAGRAM_APP_ID || "1578162103938474";
-  const appSecret = process.env.INSTAGRAM_APP_SECRET || "350e42d76503cbfb0bfa2ddbe320ef45";
+  const appSecret = process.env.INSTAGRAM_APP_SECRET || "";
   const redirectUri = "https://earnwithads.in/api/auth/ig/callback";
 
+  let realHandle = "";
+  let realName = "";
+  let realFollowers = "10K";
+  let token = "";
+
   try {
-    // 1. Exchange Instagram OAuth Code for Short-Lived User Access Token
-    const formData = new URLSearchParams();
-    formData.append("client_id", appId);
-    formData.append("client_secret", appSecret);
-    formData.append("grant_type", "authorization_code");
-    formData.append("redirect_uri", redirectUri);
-    formData.append("code", code);
+    if (appSecret) {
+      const formData = new URLSearchParams();
+      formData.append("client_id", appId);
+      formData.append("client_secret", appSecret);
+      formData.append("grant_type", "authorization_code");
+      formData.append("redirect_uri", redirectUri);
+      formData.append("code", code);
 
-    const tokenRes = await fetch("https://api.instagram.com/oauth/access_token", {
-      method: "POST",
-      body: formData,
-    });
+      const tokenRes = await fetch("https://api.instagram.com/oauth/access_token", {
+        method: "POST",
+        body: formData,
+      });
 
-    const tokenData = await tokenRes.json();
+      const tokenData = await tokenRes.json();
+      token = tokenData.access_token || "";
 
-    let shortLivedToken = tokenData.access_token;
-
-    // 2. Query Instagram Graph API for Account Details (username, name, followers)
-    let igHandle = "@instagram_creator";
-    let igName = "Connected Instagram Creator";
-    let igFollowers = "15.4K";
-
-    if (shortLivedToken) {
-      try {
+      if (token) {
         const userRes = await fetch(
-          `https://graph.instagram.com/v18.0/me?fields=id,username,name,account_type,media_count&access_token=${shortLivedToken}`
+          `https://graph.instagram.com/v18.0/me?fields=id,username,name,account_type,media_count&access_token=${token}`
         );
         const userData = await userRes.json();
         if (userData.username) {
-          igHandle = "@" + userData.username;
-          igName = userData.name || userData.username;
+          realHandle = "@" + userData.username;
+          realName = userData.name || userData.username;
         }
-      } catch (err) {
-        console.error("Error fetching Instagram user info:", err);
       }
     }
+  } catch (err) {
+    console.error("Instagram token exchange error:", err);
+  }
 
-    // 3. Save to Supabase DB
+  // Save to Supabase DB if real handle was fetched
+  if (realHandle) {
     try {
       const supabase = createServerSupabaseClient();
       await supabase.from("instagram_accounts").upsert([
         {
-          username: igHandle,
-          name: igName,
-          followers_count: igFollowers,
-          access_token: shortLivedToken || "token_saved",
+          username: realHandle,
+          name: realName,
+          followers_count: realFollowers,
+          access_token: token || "token_saved",
           status: "active",
           updated_at: new Date().toISOString(),
         },
@@ -78,19 +76,18 @@ export async function GET(req: NextRequest) {
     } catch (dbErr) {
       console.error("Supabase IG Account Save Error:", dbErr);
     }
-
-    // 4. Redirect back to Instagram Dashboard with connected account parameters
-    const redirectUrl = new URL("/dashboard/instagram", req.url);
-    redirectUrl.searchParams.set("connected", "true");
-    redirectUrl.searchParams.set("handle", igHandle);
-    redirectUrl.searchParams.set("name", igName);
-    redirectUrl.searchParams.set("followers", igFollowers);
-
-    return NextResponse.redirect(redirectUrl);
-  } catch (err: any) {
-    console.error("Instagram OAuth Callback Exception:", err);
-    return NextResponse.redirect(
-      new URL("/dashboard/instagram?connected=true&handle=@instagram_creator", req.url)
-    );
   }
+
+  const redirectUrl = new URL("/dashboard/instagram", req.url);
+  redirectUrl.searchParams.set("connected", "true");
+  if (realHandle) {
+    redirectUrl.searchParams.set("handle", realHandle);
+    redirectUrl.searchParams.set("name", realName);
+    redirectUrl.searchParams.set("followers", realFollowers);
+  } else {
+    // If token exchange needs handle input, open handle input modal
+    redirectUrl.searchParams.set("action", "enter_handle");
+  }
+
+  return NextResponse.redirect(redirectUrl);
 }

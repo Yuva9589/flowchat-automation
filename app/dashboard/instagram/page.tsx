@@ -72,56 +72,59 @@ export default function InstagramDashboardPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [account, setAccount] = useState<InstagramAccount>({
-    handle: "@ashish_kushwaha",
-    name: "Ashish Kushwaha",
-    followers: "12.4K",
-    connectedAt: "Just now",
-    status: "Active",
+    handle: "",
+    name: "",
+    followers: "",
+    connectedAt: "",
+    status: "Disconnected",
   });
 
   const [automations, setAutomations] = useState<ComponentAutomation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Sync Instagram account from DB & localStorage & OAuth callback query
+  // Sync Instagram account from URL query / DB / localStorage
   useEffect(() => {
     const fetchAccount = async () => {
       try {
-        // 1. Check URL params from Meta OAuth Callback
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get("connected") === "true" || urlParams.has("code")) {
-          const handle = urlParams.get("handle") || "@meta_verified_account";
-          const name = urlParams.get("name") || "Meta Verified Creator";
-          const followers = urlParams.get("followers") || "25.8K";
+        const urlHandle = urlParams.get("handle");
+        const isFake = urlHandle?.includes("creator") || urlHandle?.includes("brand") || urlHandle?.includes("meta");
 
-          const oauthAccount: InstagramAccount = {
-            handle: handle.startsWith("@") ? handle : "@" + handle,
-            name: name,
-            followers: followers,
+        // 1. Check URL params if coming back from OAuth
+        if (urlParams.get("connected") === "true" && urlHandle && !isFake) {
+          const cleanHandle = urlHandle.startsWith("@") ? urlHandle : "@" + urlHandle;
+          const realName = urlParams.get("name") || cleanHandle.replace("@", "");
+          const realFollowers = urlParams.get("followers") || "10K";
+
+          const newAcc: InstagramAccount = {
+            handle: cleanHandle,
+            name: realName,
+            followers: realFollowers,
             connectedAt: "Just now",
             status: "Active",
           };
-          setAccount(oauthAccount);
-          setIsConnected(true);
-          localStorage.setItem("flowchat_instagram_account", JSON.stringify(oauthAccount));
 
-          // Save to Supabase DB
+          setAccount(newAcc);
+          setIsConnected(true);
+          localStorage.setItem("flowchat_instagram_account", JSON.stringify(newAcc));
+
           await fetch("/api/instagram/account", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              username: oauthAccount.handle,
-              name: oauthAccount.name,
-              followers: oauthAccount.followers,
+              username: newAcc.handle,
+              name: newAcc.name,
+              followers: newAcc.followers,
             }),
           });
           return;
         }
 
-        // 2. Fetch from DB
+        // 2. Fetch real saved account from DB
         const res = await fetch("/api/instagram/account");
         if (res.ok) {
           const data = await res.json();
-          if (data.connected && data.account) {
+          if (data.connected && data.account && data.account.handle && !data.account.handle.includes("creator")) {
             setAccount(data.account);
             setIsConnected(true);
             localStorage.setItem("flowchat_instagram_account", JSON.stringify(data.account));
@@ -133,11 +136,15 @@ export default function InstagramDashboardPage() {
         const saved = localStorage.getItem("flowchat_instagram_account");
         if (saved) {
           const parsed = JSON.parse(saved);
-          setAccount(parsed);
-          setIsConnected(true);
-        } else {
-          setIsConnected(false);
+          if (parsed.handle && !parsed.handle.includes("creator") && !parsed.handle.includes("brand")) {
+            setAccount(parsed);
+            setIsConnected(true);
+            return;
+          }
         }
+
+        // Clean slate if no real handle is connected
+        setIsConnected(false);
       } catch (e) {
         console.error("Account load error:", e);
       }
@@ -188,6 +195,13 @@ export default function InstagramDashboardPage() {
 
   const handleDisconnect = async () => {
     setIsConnected(false);
+    setAccount({
+      handle: "",
+      name: "",
+      followers: "",
+      connectedAt: "",
+      status: "Disconnected",
+    });
     try {
       localStorage.removeItem("flowchat_instagram_account");
       await fetch("/api/instagram/account", { method: "DELETE" });
@@ -286,7 +300,7 @@ export default function InstagramDashboardPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h1 className="text-2xl md:text-3xl font-black text-white">Instagram</h1>
-              {isConnected && (
+              {isConnected && account.handle && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-md">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   Live ({account.handle})
