@@ -57,9 +57,9 @@ const columns = [
   {
     title: "Platforms",
     links: [
-      { label: "Instagram Auto-DM", href: "/dashboard/instagram" },
-      { label: "Facebook Auto-DM", href: "/dashboard/facebook" },
-      { label: "WhatsApp Automation", href: "/dashboard/whatsapp" },
+      { label: "Instagram Auto-DM", href: "/#features" },
+      { label: "Facebook Auto-DM", href: "/#features" },
+      { label: "WhatsApp Automation", href: "/#features" },
     ],
   },
   {

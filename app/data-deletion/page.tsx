@@ -17,9 +17,9 @@ const dataDeletionData = {
   methods: [
     {
       step: "Method 1",
-      title: "Self-Service Deletion via Flowchat Dashboard (Instant)",
+      title: "Email-Based Deletion Request (Fastest)",
       description:
-        "1. Log into your dashboard at earnwithads.in/dashboard.\n2. Navigate to Settings for Instagram, Facebook, or WhatsApp.\n3. Click 'Disconnect Account & Purge All Automations'.\n4. Your connected Page tokens, keyword rules, and DM logs are permanently erased from our Supabase database within 5 seconds.",
+        "1. Email us at ashishkushwaha1822@gmail.com with subject 'Delete My Data'.\n2. Include the email address you signed up with (and your Instagram/Facebook username, if connected).\n3. Our team permanently erases your account, connected Page tokens, keyword rules, and DM logs from our Supabase database within 5 seconds of verification.",
     },
     {
       step: "Method 2",
