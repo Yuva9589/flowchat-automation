@@ -33,6 +33,8 @@ export default function RootLayout({
           borderRadius: "0.75rem",
         },
       }}
+      signInFallbackRedirectUrl="/dashboard"
+      signUpFallbackRedirectUrl="/dashboard"
     >
       <html
         lang="en"
