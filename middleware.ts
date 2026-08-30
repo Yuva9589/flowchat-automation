@@ -2,8 +2,8 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 // Routes that require authentication
-// NOTE: /dashboard removed — dashboard was deleted, will be rebuilt later
 const isProtectedRoute = createRouteMatcher([
+  "/dashboard(.*)",
   "/admin(.*)",
   "/settings(.*)",
 ]);
