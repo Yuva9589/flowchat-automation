@@ -8,8 +8,12 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req) && !auth.userId) {
-    return auth.redirectToSignIn();
+  if (isProtectedRoute(req)) {
+    // Clerk v7: auth() returns the session object + redirect helpers
+    const authObject = await auth();
+    if (!authObject.userId) {
+      return authObject.redirectToSignIn();
+    }
   }
 });
 
