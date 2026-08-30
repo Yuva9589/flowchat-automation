@@ -62,12 +62,6 @@ export default function Navbar() {
           ) : isSignedIn ? (
             /* Logged IN state */
             <>
-              <a
-                href="/dashboard"
-                className="text-sm font-medium text-gray-700 hover:text-[#03856b] transition-colors"
-              >
-                Dashboard
-              </a>
               <UserButton
                 appearance={{
                   elements: {
@@ -120,15 +114,7 @@ export default function Navbar() {
             </a>
           ))}
 
-          {!isLoaded ? null : isSignedIn ? (
-            <a
-              href="/dashboard"
-              style={{ backgroundColor: "#03856b" }}
-              className="block text-white text-center px-5 py-3 rounded-full font-semibold mt-3"
-            >
-              Go to Dashboard
-            </a>
-          ) : (
+          {!isLoaded ? null : isSignedIn ? null : (
             <>
               <a
                 href="/sign-in"
